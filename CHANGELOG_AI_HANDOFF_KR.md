@@ -11,6 +11,54 @@
 
 ---
 
+## [0.2.0] — 2026-04-08
+
+### Phase 1 — 인증, CRM, 프로젝트 관리
+
+#### 용어 정리
+| 용어 | 정의 |
+|------|------|
+| **Work Item** | 개발 단위 작업 (Epic → Story → Task 계층) |
+| **Orchestrator** | 에이전트 작업 흐름을 조율하는 Phoenix 서버 |
+| **A2A** | Agent-to-Agent Protocol — 에이전트 간 표준 통신 규약 |
+| **MCP** | Model Context Protocol — 에이전트와 외부 도구 연결 규약 |
+| **Agent Card** | 에이전트가 자신의 능력과 엔드포인트를 선언하는 JSON 문서 |
+| **DSL** | Domain-Specific Language — 오케스트레이션 설정용 JSON 문법 |
+| **Triage** | 수신된 피드백을 유형·심각도별로 분류하는 과정 |
+| **Feature File** | Cucumber BDD 형식의 요구사항 명세 파일 (.feature) |
+
+#### 추가
+- **Prisma 스키마** (`apps/api/prisma/schema.prisma`): 전체 엔티티 정의
+  - 인증: `User`, `PortalUser`
+  - CRM: `Customer`, `Opportunity`, `Contract`
+  - 프로젝트: `Project`, `ProjectMember`
+  - Work Item: `WorkItem`, `WorkItemDependency`, `TaskEstimation`
+  - 요구사항: `Requirement`, `RequirementVersion`, `RequirementLink`
+  - 디자인: `DesignArtifact`, `DesignArtifactVersion`
+  - QA: `TestCase`, `TestRun`, `TestResult`
+  - 릴리스: `Release`, `ReleaseItem`, `Build`
+  - 에이전트: `AgentCard`, `AgentTask`
+  - 피드백: `Feedback` (pgvector 임베딩 필드 포함)
+- **Prisma 시드** (`apps/api/prisma/seed.ts`): Admin/PM 사용자 + 12개 에이전트 카드 초기 데이터
+- **NestJS 공통 레이어**:
+  - `PrismaService` / `PrismaModule` (전역)
+  - `JwtAuthGuard`, `RolesGuard`
+  - `@CurrentUser()`, `@Roles()` 데코레이터
+  - `HttpExceptionFilter`, `AllExceptionsFilter`
+- **Auth 모듈**: JWT 로그인, 리프레시 토큰, `/api/auth/me`
+- **CRM 모듈**: 고객사, 영업기회(파이프라인 단계 관리), 계약 CRUD
+- **Projects 모듈**: CRUD + 진척률 조회 + 오케스트레이션 DSL 업데이트
+- **Work Items 모듈**: 계층형 CRUD (Epic→Story→Task) + Kanban 상태 업데이트
+- **`main.ts`**: Swagger, CORS, ValidationPipe, 전역 필터 설정
+- **Admin UI — 로그인 페이지** (`apps/web/app/(auth)/login/page.tsx`)
+- **Admin UI — Sidebar**: 현재 경로 하이라이트 포함 네비게이션
+- **Admin UI — 대시보드**: 프로젝트/에이전트 요약 통계
+- **Admin UI — CRM 페이지**: 고객 테이블 + 영업 파이프라인 (단계별 Kanban)
+- **Admin UI — 프로젝트 목록**: 상태 배지 + 플랫폼 칩 + 진척률 바 카드 그리드
+- **Admin UI — 프로젝트 상세**: 서브 네비게이션 + 인라인 상태 변경 Kanban 보드
+
+---
+
 ## [0.1.0] — 2026-04-08
 
 ### Phase 0 — 모노레포 골격 및 인프라 기반

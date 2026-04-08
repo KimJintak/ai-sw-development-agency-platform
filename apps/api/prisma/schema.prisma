@@ -1,0 +1,615 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         UserRole @default(PM)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  projectMembers ProjectMember[]
+  agentTasks     AgentTask[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  PM
+  CLIENT
+  AGENT
+}
+
+model PortalUser {
+  id           String   @id @default(cuid())
+  customerId   String   @map("customer_id")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("portal_users")
+}
+
+// ─────────────────────────────────────────────
+// CRM
+// ─────────────────────────────────────────────
+
+model Customer {
+  id          String   @id @default(cuid())
+  companyName String   @map("company_name")
+  contactName String   @map("contact_name")
+  email       String
+  phone       String?
+  address     String?
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  opportunities Opportunity[]
+  projects      Project[]
+  portalUsers   PortalUser[]
+
+  @@map("customers")
+}
+
+model Opportunity {
+  id                String           @id @default(cuid())
+  customerId        String           @map("customer_id")
+  title             String
+  stage             OpportunityStage @default(LEAD)
+  estimatedValue    Decimal?         @map("estimated_value")
+  description       String?
+  expectedCloseDate DateTime?        @map("expected_close_date")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  customer Customer  @relation(fields: [customerId], references: [id])
+  contract Contract?
+
+  @@map("opportunities")
+}
+
+enum OpportunityStage {
+  LEAD
+  NEGOTIATION
+  CONTRACT
+  COMPLETED
+  LOST
+}
+
+model Contract {
+  id            String    @id @default(cuid())
+  opportunityId String    @unique @map("opportunity_id")
+  projectId     String?   @unique @map("project_id")
+  amount        Decimal
+  currency      String    @default("KRW")
+  startDate     DateTime  @map("start_date")
+  deadlineDate  DateTime  @map("deadline_date")
+  platforms     Platform[]
+  signedAt      DateTime? @map("signed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id])
+  project     Project?    @relation(fields: [projectId], references: [id])
+
+  @@map("contracts")
+}
+
+// ─────────────────────────────────────────────
+// PROJECTS
+// ─────────────────────────────────────────────
+
+enum Platform {
+  MACOS
+  WINDOWS
+  IOS
+  ANDROID
+  WEB
+  LINUX
+}
+
+model Project {
+  id               String        @id @default(cuid())
+  customerId       String        @map("customer_id")
+  name             String
+  description      String?
+  status           ProjectStatus @default(ACTIVE)
+  platforms        Platform[]
+  orchestrationDsl Json?         @map("orchestration_dsl")
+  githubRepo       String?       @map("github_repo")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  customer        Customer          @relation(fields: [customerId], references: [id])
+  contract        Contract?
+  members         ProjectMember[]
+  requirements    Requirement[]
+  workItems       WorkItem[]
+  releases        Release[]
+  designArtifacts DesignArtifact[]
+  agentTasks      AgentTask[]
+  feedback        Feedback[]
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
+  role      UserRole
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+// ─────────────────────────────────────────────
+// WORK ITEMS
+// ─────────────────────────────────────────────
+
+model WorkItem {
+  id            String         @id @default(cuid())
+  projectId     String         @map("project_id")
+  parentId      String?        @map("parent_id")
+  type          WorkItemType
+  title         String
+  description   String?
+  status        WorkItemStatus @default(BACKLOG)
+  priority      Priority       @default(P2)
+  platform      Platform?
+  assignedAgent String?        @map("assigned_agent")
+  storyPoints   Int?           @map("story_points")
+  order         Int            @default(0)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  project  Project   @relation(fields: [projectId], references: [id])
+  parent   WorkItem? @relation("WorkItemHierarchy", fields: [parentId], references: [id])
+  children WorkItem[] @relation("WorkItemHierarchy")
+
+  requirementLinks RequirementLink[]
+  testCases        TestCase[]
+  estimations      TaskEstimation[]
+  dependencies     WorkItemDependency[] @relation("DependsOn")
+  dependents       WorkItemDependency[] @relation("RequiredBy")
+  releaseItems     ReleaseItem[]
+  agentTask        AgentTask?
+  feedback         Feedback[]
+
+  @@map("work_items")
+}
+
+enum WorkItemType {
+  EPIC
+  STORY
+  TASK
+}
+
+enum WorkItemStatus {
+  BACKLOG
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum Priority {
+  P0
+  P1
+  P2
+  P3
+}
+
+model WorkItemDependency {
+  id          String @id @default(cuid())
+  workItemId  String @map("work_item_id")
+  dependsOnId String @map("depends_on_id")
+
+  workItem  WorkItem @relation("DependsOn", fields: [workItemId], references: [id])
+  dependsOn WorkItem @relation("RequiredBy", fields: [dependsOnId], references: [id])
+
+  @@unique([workItemId, dependsOnId])
+  @@map("work_item_dependencies")
+}
+
+model TaskEstimation {
+  id         String @id @default(cuid())
+  workItemId String @map("work_item_id")
+  optimistic Float
+  mostLikely Float  @map("most_likely")
+  pessimistic Float
+  pert       Float
+  variance   Float
+
+  workItem WorkItem @relation(fields: [workItemId], references: [id])
+
+  @@map("task_estimations")
+}
+
+// ─────────────────────────────────────────────
+// REQUIREMENTS
+// ─────────────────────────────────────────────
+
+model Requirement {
+  id          String            @id @default(cuid())
+  projectId   String            @map("project_id")
+  title       String
+  featureFile String            @map("feature_file")
+  platforms   Platform[]
+  status      RequirementStatus @default(DRAFT)
+  version     Int               @default(1)
+  approvedAt  DateTime?         @map("approved_at")
+  approvedBy  String?           @map("approved_by")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  project          Project              @relation(fields: [projectId], references: [id])
+  versions         RequirementVersion[]
+  requirementLinks RequirementLink[]
+
+  @@map("requirements")
+}
+
+enum RequirementStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+model RequirementVersion {
+  id            String   @id @default(cuid())
+  requirementId String   @map("requirement_id")
+  version       Int
+  featureFile   String   @map("feature_file")
+  changedBy     String   @map("changed_by")
+  changeNote    String?  @map("change_note")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  requirement Requirement @relation(fields: [requirementId], references: [id])
+
+  @@unique([requirementId, version])
+  @@map("requirement_versions")
+}
+
+model RequirementLink {
+  id            String @id @default(cuid())
+  requirementId String @map("requirement_id")
+  workItemId    String @map("work_item_id")
+
+  requirement Requirement @relation(fields: [requirementId], references: [id])
+  workItem    WorkItem    @relation(fields: [workItemId], references: [id])
+
+  @@unique([requirementId, workItemId])
+  @@map("requirement_links")
+}
+
+// ─────────────────────────────────────────────
+// DESIGN ARTIFACTS
+// ─────────────────────────────────────────────
+
+enum ArtifactType {
+  ARCHITECTURE
+  ERD
+  WIREFRAME
+  FLOWCHART
+  SEQUENCE
+}
+
+model DesignArtifact {
+  id          String       @id @default(cuid())
+  projectId   String       @map("project_id")
+  type        ArtifactType
+  title       String
+  mermaidCode String?      @map("mermaid_code")
+  figmaUrl    String?      @map("figma_url")
+  version     Int          @default(1)
+  createdBy   String       @map("created_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  project  Project                @relation(fields: [projectId], references: [id])
+  versions DesignArtifactVersion[]
+
+  @@map("design_artifacts")
+}
+
+model DesignArtifactVersion {
+  id               String   @id @default(cuid())
+  designArtifactId String   @map("design_artifact_id")
+  version          Int
+  mermaidCode      String?  @map("mermaid_code")
+  figmaUrl         String?  @map("figma_url")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  artifact DesignArtifact @relation(fields: [designArtifactId], references: [id])
+
+  @@unique([designArtifactId, version])
+  @@map("design_artifact_versions")
+}
+
+// ─────────────────────────────────────────────
+// QA & TEST
+// ─────────────────────────────────────────────
+
+model TestCase {
+  id         String    @id @default(cuid())
+  workItemId String    @map("work_item_id")
+  title      String
+  scenario   String
+  platform   Platform?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  workItem    WorkItem     @relation(fields: [workItemId], references: [id])
+  testResults TestResult[]
+
+  @@map("test_cases")
+}
+
+model TestRun {
+  id        String        @id @default(cuid())
+  releaseId String        @map("release_id")
+  platform  Platform
+  status    TestRunStatus @default(PENDING)
+  startedAt DateTime?     @map("started_at")
+  endedAt   DateTime?     @map("ended_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  release     Release      @relation(fields: [releaseId], references: [id])
+  testResults TestResult[]
+
+  @@map("test_runs")
+}
+
+enum TestRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model TestResult {
+  id         String           @id @default(cuid())
+  testRunId  String           @map("test_run_id")
+  testCaseId String           @map("test_case_id")
+  status     TestResultStatus
+  duration   Int?
+  errorLog   String?          @map("error_log")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  testRun  TestRun  @relation(fields: [testRunId], references: [id])
+  testCase TestCase @relation(fields: [testCaseId], references: [id])
+
+  @@map("test_results")
+}
+
+enum TestResultStatus {
+  PASSED
+  FAILED
+  SKIPPED
+}
+
+// ─────────────────────────────────────────────
+// RELEASES & BUILDS
+// ─────────────────────────────────────────────
+
+model Release {
+  id          String        @id @default(cuid())
+  projectId   String        @map("project_id")
+  version     String
+  title       String?
+  status      ReleaseStatus @default(DRAFT)
+  platforms   Platform[]
+  approvedAt  DateTime?     @map("approved_at")
+  deployedAt  DateTime?     @map("deployed_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  project      Project       @relation(fields: [projectId], references: [id])
+  releaseItems ReleaseItem[]
+  testRuns     TestRun[]
+  builds       Build[]
+
+  @@map("releases")
+}
+
+enum ReleaseStatus {
+  DRAFT
+  TESTING
+  APPROVED
+  DEPLOYING
+  DEPLOYED
+  ROLLED_BACK
+}
+
+model ReleaseItem {
+  id         String @id @default(cuid())
+  releaseId  String @map("release_id")
+  workItemId String @map("work_item_id")
+
+  release  Release  @relation(fields: [releaseId], references: [id])
+  workItem WorkItem @relation(fields: [workItemId], references: [id])
+
+  @@unique([releaseId, workItemId])
+  @@map("release_items")
+}
+
+model Build {
+  id            String      @id @default(cuid())
+  releaseId     String      @map("release_id")
+  platform      Platform
+  status        BuildStatus @default(PENDING)
+  s3Key         String?     @map("s3_key")
+  cloudfrontUrl String?     @map("cloudfront_url")
+  buildLog      String?     @map("build_log")
+  startedAt     DateTime?   @map("started_at")
+  completedAt   DateTime?   @map("completed_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  release Release @relation(fields: [releaseId], references: [id])
+
+  @@map("builds")
+}
+
+enum BuildStatus {
+  PENDING
+  BUILDING
+  SUCCESS
+  FAILED
+}
+
+// ─────────────────────────────────────────────
+// AGENTS
+// ─────────────────────────────────────────────
+
+enum AgentType {
+  CRM
+  PM
+  ARCHITECTURE
+  UX
+  MAC_DEV
+  WINDOWS_DEV
+  AWS_DEV
+  TEST
+  DEPLOY
+  REPORT
+  TRIAGE
+  QA
+}
+
+enum AgentStatus {
+  ONLINE
+  OFFLINE
+  BUSY
+  ERROR
+}
+
+model AgentCard {
+  id          String      @id @default(cuid())
+  agentType   AgentType   @unique @map("agent_type")
+  name        String
+  description String?
+  endpoint    String
+  skills      Json
+  status      AgentStatus @default(OFFLINE)
+  lastSeenAt  DateTime?   @map("last_seen_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  agentTasks AgentTask[]
+
+  @@map("agent_cards")
+}
+
+model AgentTask {
+  id          String          @id @default(cuid())
+  agentCardId String          @map("agent_card_id")
+  workItemId  String?         @unique @map("work_item_id")
+  projectId   String?         @map("project_id")
+  userId      String?         @map("user_id")
+  taskType    String          @map("task_type")
+  payload     Json
+  status      AgentTaskStatus @default(SUBMITTED)
+  retryCount  Int             @default(0) @map("retry_count")
+  maxRetries  Int             @default(3) @map("max_retries")
+  result      Json?
+  errorLog    String?         @map("error_log")
+  startedAt   DateTime?       @map("started_at")
+  completedAt DateTime?       @map("completed_at")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  agentCard AgentCard @relation(fields: [agentCardId], references: [id])
+  workItem  WorkItem? @relation(fields: [workItemId], references: [id])
+  project   Project?  @relation(fields: [projectId], references: [id])
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@map("agent_tasks")
+}
+
+enum AgentTaskStatus {
+  SUBMITTED
+  WORKING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────────
+// FEEDBACK
+// ─────────────────────────────────────────────
+
+model Feedback {
+  id            String         @id @default(cuid())
+  projectId     String         @map("project_id")
+  workItemId    String?        @map("work_item_id")
+  source        FeedbackSource
+  type          FeedbackType?
+  severity      Priority?
+  title         String
+  body          String
+  embedding     Unsupported("vector(1536)")?
+  status        FeedbackStatus @default(NEW)
+  sentryEventId String?        @map("sentry_event_id")
+  resolvedAt    DateTime?      @map("resolved_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  project  Project   @relation(fields: [projectId], references: [id])
+  workItem WorkItem? @relation(fields: [workItemId], references: [id])
+
+  @@map("feedback")
+}
+
+enum FeedbackSource {
+  PORTAL
+  SENTRY
+  API
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE
+  IMPROVEMENT
+  QUESTION
+}
+
+enum FeedbackStatus {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  RESOLVED
+  DUPLICATE
+}
