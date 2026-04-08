@@ -1,0 +1,22 @@
+{
+  "name": "agent-base",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.1",
+    "axios": "^1.7.9",
+    "ws": "^8.18.0",
+    "@anthropic-ai/sdk": "^0.36.2",
+    "shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.3"
+  }
+}

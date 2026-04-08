@@ -1,0 +1,41 @@
+name: CI — Portal (Client Portal)
+
+on:
+  push:
+    paths:
+      - 'apps/portal/**'
+      - 'packages/shared-types/**'
+      - '.github/workflows/ci-portal.yml'
+  pull_request:
+    paths:
+      - 'apps/portal/**'
+      - 'packages/shared-types/**'
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter portal lint
+
+      - name: Build
+        run: pnpm --filter portal build
+        env:
+          NEXT_PUBLIC_PORTAL_API_URL: http://localhost:4000
+          NEXTAUTH_URL: http://localhost:3001
+          NEXTAUTH_SECRET: ci-test-secret

@@ -1,0 +1,78 @@
+name: CI — Orchestrator (Phoenix/Elixir)
+
+on:
+  push:
+    paths:
+      - 'apps/orchestrator/**'
+      - '.github/workflows/ci-orchestrator.yml'
+  pull_request:
+    paths:
+      - 'apps/orchestrator/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: agency_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.17'
+          otp-version: '27'
+
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: apps/orchestrator/deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('apps/orchestrator/mix.lock') }}
+
+      - name: Install dependencies
+        working-directory: apps/orchestrator
+        run: mix deps.get
+
+      - name: Compile
+        working-directory: apps/orchestrator
+        run: mix compile --warnings-as-errors
+        env:
+          MIX_ENV: test
+
+      - name: Credo (lint)
+        working-directory: apps/orchestrator
+        run: mix credo --strict
+        env:
+          MIX_ENV: test
+
+      - name: Run tests
+        working-directory: apps/orchestrator
+        run: mix test
+        env:
+          MIX_ENV: test
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/agency_test
+          REDIS_URL: redis://localhost:6379
+          PHX_SECRET_KEY_BASE: test-secret-key-base-needs-64-chars-minimum-padding!!

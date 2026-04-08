@@ -1,0 +1,119 @@
+version: '3.9'
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # PostgreSQL with pgvector extension
+  # ─────────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: agency_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: agency_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # Redis (Streams 활성화)
+  # ─────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: agency_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy noeviction
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # Phoenix Orchestrator
+  # ─────────────────────────────────────────────────────────────
+  orchestrator:
+    build:
+      context: ../../apps/orchestrator
+      dockerfile: ../../infra/docker/orchestrator.Dockerfile
+    container_name: agency_orchestrator
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://postgres:password@postgres:5432/agency_db"
+      REDIS_URL: "redis://redis:6379"
+      PHX_SECRET_KEY_BASE: "local-dev-secret-key-base-change-in-production-64chars!!"
+      PHX_HOST: "localhost"
+      PHX_PORT: "4001"
+      API_URL: "http://api:4000"
+      ORCHESTRATOR_SECRET: "local-dev-orchestrator-secret"
+    ports:
+      - "4001:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - full
+
+  # ─────────────────────────────────────────────────────────────
+  # NestJS API
+  # ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: ../../infra/docker/api.Dockerfile
+    container_name: agency_api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://postgres:password@postgres:5432/agency_db"
+      REDIS_URL: "redis://redis:6379"
+      ORCHESTRATOR_URL: "http://orchestrator:4001"
+      JWT_SECRET: "local-dev-jwt-secret"
+      JWT_REFRESH_SECRET: "local-dev-refresh-secret"
+      API_PORT: "4000"
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - full
+
+  # ─────────────────────────────────────────────────────────────
+  # Redis Commander (개발 편의용 UI)
+  # ─────────────────────────────────────────────────────────────
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: agency_redis_ui
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: "local:redis:6379"
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - dev-tools
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: agency_network

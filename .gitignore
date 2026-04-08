@@ -1,0 +1,46 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# build outputs
+dist
+.next
+out
+build
+_build
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# turbo
+.turbo
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+
+# Elixir
+_build
+deps
+*.beam
+priv/static/
+
+# test coverage
+coverage
+.nyc_output
+
+# AWS
+*.pem
