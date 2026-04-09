@@ -18,4 +18,8 @@ config :logger, :console,
 
 config :phoenix, :json_library, Jason
 
+# API callback defaults — overridden by env-specific configs.
+config :orchestrator, :api_url, "http://localhost:4000"
+config :orchestrator, :orchestrator_secret, ""
+
 import_config "#{config_env()}.exs"
