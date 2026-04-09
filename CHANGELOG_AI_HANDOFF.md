@@ -11,6 +11,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] — 2026-04-09
+
+### Phase 5 — Design Hub (FR-06)
+
+#### Added
+- **`DesignModule`** (`apps/api/src/design/`)
+  - `DesignService` — CRUD over `DesignArtifact` /
+    `DesignArtifactVersion`. Any content change (`mermaidCode` /
+    `figmaUrl`) snapshots a new version row and bumps the counter
+    (FR-06-04, FR-06-05 — immutability of prior versions). Title-only
+    edits don't create a new version.
+  - `create` rejects artifacts with neither `mermaidCode` nor
+    `figmaUrl` (`BadRequestException`).
+  - `findByProject(projectId, type?)` supports per-tab filtering.
+  - `remove` cascades versions → artifact inside a transaction.
+  - `DesignController` (JWT) — `GET /api/design?projectId=&type=`,
+    `GET /api/design/:id`, `GET /:id/versions`, `POST /api/design`,
+    `PATCH /:id`, `DELETE /:id`.
+  - DTOs: `CreateDesignArtifactDto`, `UpdateDesignArtifactDto`.
+    `ArtifactType` is `ARCHITECTURE/ERD/WIREFRAME/FLOWCHART/SEQUENCE`.
+- **`app.module.ts`** imports `DesignModule`.
+- **Admin UI — `/projects/:id/design` page**
+  (`apps/web/app/(admin)/projects/[id]/design/page.tsx`)
+  - FR-06-06: tabs for Architecture / ERD / Wireframe / Flowchart /
+    Sequence.
+  - FR-06-01: Mermaid preview via `mermaid@11.4.1` (dynamic client
+    import, no SSR impact).
+  - FR-06-02: theme dropdown (`default/dark/forest/neutral`).
+  - FR-06-03: Wireframe tab renders the Figma URL in an iframe.
+  - Tab-specific Mermaid templates pre-filled in the new-artifact form.
+  - Two-column layout: artifact list on the left, preview on the right.
+- **`components/design/mermaid-viewer.tsx`** — reusable MermaidViewer
+  component with `securityLevel: 'strict'`, error boxes, and
+  SSR-safe dynamic import.
+
+#### Known limitations
+- No in-place edit UI — the PATCH endpoint exists but is not wired
+  into the UI yet.
+- Figma URLs are not validated; a `figma.com` allow-list will be
+  added in Phase 6.
+- UX Agent auto-generation (FR-06-07) deferred to Phase 7+.
+- Mermaid `securityLevel: 'strict'` disables some advanced syntax
+  (e.g. click events).
+
+---
+
 ## [0.5.0] — 2026-04-09
 
 ### Phase 4 — Requirements management (FR-03)

@@ -11,6 +11,50 @@
 
 ---
 
+## [0.6.0] — 2026-04-09
+
+### Phase 5 — Design Hub (FR-06)
+
+#### 추가
+- **`DesignModule`** (`apps/api/src/design/`)
+  - `DesignService` — `DesignArtifact` / `DesignArtifactVersion` CRUD.
+    모든 content 변경(`mermaidCode` / `figmaUrl`)은 새 버전을 남기고
+    `version` 카운터를 증가시킴 (FR-06-04, FR-06-05 — 덮어쓰기 금지).
+    title-only 변경은 버전을 남기지 않음.
+  - `create`는 `mermaidCode` 또는 `figmaUrl` 중 최소 하나가 있어야 함
+    (`BadRequestException`).
+  - `findByProject(projectId, type?)` — Design Hub 탭별 필터 지원.
+  - `remove`는 versions → artifact 순으로 트랜잭션 삭제.
+  - `DesignController` (JWT 인증) — `GET /api/design?projectId=&type=`,
+    `GET /api/design/:id` (versions 포함), `GET /:id/versions`,
+    `POST /api/design`, `PATCH /:id`, `DELETE /:id`.
+  - DTO: `CreateDesignArtifactDto`, `UpdateDesignArtifactDto`.
+    `ArtifactType`은 `ARCHITECTURE/ERD/WIREFRAME/FLOWCHART/SEQUENCE`.
+- **`app.module.ts`**에 `DesignModule` import.
+- **Admin UI — `/projects/:id/design` 페이지**
+  (`apps/web/app/(admin)/projects/[id]/design/page.tsx`)
+  - FR-06-06: Architecture / ERD / Wireframe / Flowchart / Sequence
+    탭 분리.
+  - FR-06-01: Mermaid 뷰어를 통한 미리보기. `mermaid@11.4.1` 동적
+    import로 클라이언트에서만 렌더.
+  - FR-06-02: 테마 전환 드롭다운 (`default/dark/forest/neutral`).
+  - FR-06-03: Wireframe 탭은 Figma URL을 iframe으로 렌더.
+  - 탭별 Mermaid 템플릿 pre-fill (ARCHITECTURE/ERD/FLOWCHART/SEQUENCE).
+  - 2-column 레이아웃: 좌측 artifact 리스트, 우측 미리보기.
+- **`components/design/mermaid-viewer.tsx`** — 재사용 가능한
+  MermaidViewer 컴포넌트. `securityLevel: 'strict'`, 렌더 에러를
+  붉은 박스로 표시, 동적 import로 SSR 안전.
+
+#### 알려진 제약사항
+- In-place 편집 UI 없음. PATCH 엔드포인트는 존재하므로 curl 사용 가능.
+- Figma URL은 validation 없음 — 잘못된 URL도 그대로 iframe에 들어감.
+  Phase 6에서 `figma.com` allowlist 추가 예정.
+- UX Agent 자동 생성 (FR-06-07)은 Phase 7 이후.
+- Mermaid `securityLevel: 'strict'`라 일부 고급 문법(click events 등)은
+  비활성화됨.
+
+---
+
 ## [0.5.0] — 2026-04-09
 
 ### Phase 4 — 요구사항 관리 (FR-03)
