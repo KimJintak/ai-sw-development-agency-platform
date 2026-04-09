@@ -11,6 +11,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] — 2026-04-09
+
+### Phase 3 — Orchestrator↔API integration closure + Agents module
+
+#### Added
+- **`AgentsModule`** (`apps/api/src/agents/`)
+  - `AgentsService` — Prisma-backed CRUD over `AgentCard` / `AgentTask`
+    with `listCards`, `findCard`, `listTasks` (filter by projectId /
+    status / agentType), `findTask`, `createTask`, `applyUpdate`,
+    `markComplete`.
+  - `AgentsController` (JWT-guarded) — `GET /api/agents`,
+    `GET /api/agents/tasks/list`, `GET /api/agents/tasks/:taskId`,
+    `POST /api/agents/tasks`, `GET /api/agents/:id`. Route declaration
+    order is deliberate — `tasks/*` must precede `:id` so the static
+    segment isn't shadowed.
+  - `InternalTasksController` (OrchestratorAuthGuard) —
+    `POST /internal/tasks/:id/updates` and `POST /internal/tasks/:id/complete`.
+    These are the Phase 2 Orchestrator's `TaskCallback` sinks.
+  - DTOs: `CreateAgentTaskDto`, `TaskUpdateDto`, `TaskCompleteDto`,
+    `ListAgentTasksQuery`. `projectId` is required on
+    `CreateAgentTaskDto` because the Orchestrator's RedisConsumer
+    pattern-matches on it for per-project dispatch.
+- **`OrchestratorAuthGuard`** (`apps/api/src/common/guards/`) —
+  verifies `Authorization: Bearer ${ORCHESTRATOR_SECRET}` with
+  `crypto.timingSafeEqual`; throws `UnauthorizedException` on any
+  mismatch or if the secret is unconfigured.
+- **`RedisModule` / `RedisService`** (`apps/api/src/common/redis/`) —
+  `@Global` ioredis wrapper exposing `publishTask(entry)` which XADDs
+  to the `orchestrator:tasks` stream. Wire format matches the
+  Orchestrator's `RedisConsumer` exactly: top-level `project_id` +
+  `task_id` + `payload` JSON. Routing fields (`task_id`, `agent_type`,
+  `task_type`) are folded into the payload JSON because
+  `RedisConsumer` forwards only `payload` to
+  `ProjectOrchestrator.enqueue_task/2`.
+- **`app.module.ts`** imports `RedisModule` (global) and `AgentsModule`.
+- **Admin UI — `/agents` page** (`apps/web/app/(admin)/agents/page.tsx`)
+  — client component that lists agent cards (name / type / status /
+  endpoint) and a recent-tasks table. Uses the existing
+  `apiClient` with auto-injected JWT.
+
+#### Changed
+- `CreateAgentTaskDto.projectId` is now **required**. Tasks without a
+  `project_id` would otherwise be silently dropped by the
+  Orchestrator's RedisConsumer (`with %{"project_id" => _, ...}`).
+- `AgentsService.createTask` writes `errorLog: "redis_publish_failed: ..."`
+  and returns the updated row when XADD fails, so a future outbox
+  worker can identify and retry the task.
+- `AgentsService.applyUpdate` guards the JSON merge: `result` is only
+  spread when the existing value is a plain object (not array /
+  primitive), preventing runtime crashes on historical data.
+
+#### Known limitations (Phase 3.5 / Phase 4 follow-up)
+- No outbox worker yet — failed `XADD` calls are logged and marked on
+  the row, but nothing retries them automatically.
+- `applyUpdate` is non-atomic (read-merge-write). Two concurrent
+  updates on the same task can lose telemetry. Fix by moving the
+  JSON merge into a single `UPDATE ... jsonb_set` call.
+- `npm install` not executed here — `ioredis` was already declared in
+  `apps/api/package.json`, so no new dependencies. Run
+  `cd apps/api && npm install && npm run build` locally to verify.
+- The Admin UI has no error handling for API failures (unauthenticated
+  requests show an empty state).
+
+---
+
 ## [0.3.0] — 2026-04-09
 
 ### Phase 2 — Orchestrator skeleton

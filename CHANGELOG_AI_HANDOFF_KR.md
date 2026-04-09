@@ -11,6 +11,66 @@
 
 ---
 
+## [0.4.0] — 2026-04-09
+
+### Phase 3 — Orchestrator↔API 통합 마감 + Agents 모듈
+
+#### 추가
+- **`AgentsModule`** (`apps/api/src/agents/`)
+  - `AgentsService` — Prisma 기반 `AgentCard` / `AgentTask` CRUD.
+    `listCards`, `findCard`, `listTasks` (projectId/status/agentType
+    필터), `findTask`, `createTask`, `applyUpdate`, `markComplete` 메서드
+    제공.
+  - `AgentsController` (JWT 인증) — `GET /api/agents`,
+    `GET /api/agents/tasks/list`, `GET /api/agents/tasks/:taskId`,
+    `POST /api/agents/tasks`, `GET /api/agents/:id`. 라우트 선언
+    순서는 의도적 — `tasks/*`가 `:id`보다 먼저 와야 정적 세그먼트가
+    가려지지 않음.
+  - `InternalTasksController` (OrchestratorAuthGuard) —
+    `POST /internal/tasks/:id/updates`, `POST /internal/tasks/:id/complete`.
+    Phase 2 Orchestrator의 `TaskCallback` 수신처.
+  - DTO: `CreateAgentTaskDto`, `TaskUpdateDto`, `TaskCompleteDto`,
+    `ListAgentTasksQuery`. Orchestrator의 RedisConsumer가 `project_id`
+    로 프로젝트별 라우팅하기 때문에 `CreateAgentTaskDto.projectId`는
+    필수.
+- **`OrchestratorAuthGuard`** (`apps/api/src/common/guards/`) —
+  `Authorization: Bearer ${ORCHESTRATOR_SECRET}` 헤더를
+  `crypto.timingSafeEqual`로 검증. 불일치 또는 시크릿 미설정 시
+  `UnauthorizedException`.
+- **`RedisModule` / `RedisService`** (`apps/api/src/common/redis/`) —
+  `@Global` ioredis 래퍼. `publishTask(entry)`로 `orchestrator:tasks`
+  스트림에 XADD. Wire format은 Orchestrator의 `RedisConsumer`와 정확히
+  일치: top-level `project_id` + `task_id` + `payload` JSON. 라우팅
+  필드(`task_id`, `agent_type`, `task_type`)는 `payload` JSON 안으로
+  folding — `RedisConsumer`가 `payload`만 디코드하여
+  `ProjectOrchestrator.enqueue_task/2`에 전달하기 때문.
+- **`app.module.ts`**에 `RedisModule` (global) + `AgentsModule` import.
+- **Admin UI — `/agents` 페이지** (`apps/web/app/(admin)/agents/page.tsx`)
+  — 클라이언트 컴포넌트. 에이전트 카드(이름/타입/상태/엔드포인트)
+  목록과 최근 태스크 테이블 표시. 기존 `apiClient`로 JWT 자동 주입.
+
+#### 변경
+- `CreateAgentTaskDto.projectId`가 **필수**로 변경. 누락 시 Orchestrator
+  의 RedisConsumer (`with %{"project_id" => _, ...}`)가 조용히 엔트리를
+  폐기하는 문제 해결.
+- `AgentsService.createTask`는 XADD 실패 시 `errorLog`에
+  `"redis_publish_failed: ..."`를 기록하고 업데이트된 row를 반환. 향후
+  outbox 워커가 재시도 대상을 식별할 수 있도록.
+- `AgentsService.applyUpdate`가 JSON merge 시 기존 값이 plain object일
+  때만 spread. array / primitive 값에 대한 런타임 크래시 방지.
+
+#### 알려진 제약사항 (Phase 3.5 / Phase 4 후속)
+- Outbox 워커 미구현 — XADD 실패는 row에 마킹될 뿐 자동 재시도 없음.
+- `applyUpdate`는 비원자적 (read-merge-write). 동일 태스크에 동시
+  업데이트가 들어오면 텔레메트리가 손실될 수 있음. 단일
+  `UPDATE ... jsonb_set`로 이관 필요.
+- 이 환경에서 `npm install` 미실행 — `ioredis`는 이미
+  `apps/api/package.json`에 선언되어 있어 신규 의존성은 없음. 로컬에서
+  `cd apps/api && npm install && npm run build`로 검증 필요.
+- Admin UI에 API 실패 에러 처리 없음 (미인증 시 빈 화면).
+
+---
+
 ## [0.3.0] — 2026-04-09
 
 ### Phase 2 — Orchestrator 스켈레톤
