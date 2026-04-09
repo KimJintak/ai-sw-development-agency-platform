@@ -96,35 +96,47 @@ export class AgentsService {
     }
   }
 
+  /**
+   * Atomic read-merge-write of the AgentTask row. Earlier versions
+   * were split into two queries which lost telemetry under concurrent
+   * updates from the Orchestrator. We now wrap the read + merge + write
+   * in a single $transaction with Serializable isolation so concurrent
+   * callers are serialized at the DB layer; if a conflict occurs Prisma
+   * surfaces P2034 and the Orchestrator retries via its own outbox.
+   */
   async applyUpdate(id: string, dto: TaskUpdateDto) {
-    await this.findTask(id)
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.agentTask.findUnique({
+          where: { id },
+          select: { result: true, status: true },
+        })
+        if (!existing) throw new NotFoundException(`AgentTask ${id} not found`)
 
-    const data: Prisma.AgentTaskUpdateInput = {}
-    if (dto.status) data.status = dto.status as AgentTaskStatus
-    if (dto.status === 'WORKING') data.startedAt = new Date()
+        const data: Prisma.AgentTaskUpdateInput = {}
+        if (dto.status) data.status = dto.status as AgentTaskStatus
+        if (dto.status === 'WORKING' && existing.status !== 'WORKING') {
+          data.startedAt = new Date()
+        }
 
-    // progress / message / payload are merged into the existing result JSON
-    // so the PM UI can display in-flight telemetry without blowing away
-    // earlier updates.
-    if (dto.progress !== undefined || dto.message || dto.payload) {
-      const existing = await this.prisma.agentTask.findUnique({
-        where: { id },
-        select: { result: true },
-      })
-      const raw = existing?.result
-      const prior =
-        raw && typeof raw === 'object' && !Array.isArray(raw)
-          ? (raw as Record<string, unknown>)
-          : {}
-      data.result = {
-        ...prior,
-        ...(dto.progress !== undefined ? { progress: dto.progress } : {}),
-        ...(dto.message ? { lastMessage: dto.message } : {}),
-        ...(dto.payload ?? {}),
-      } as Prisma.InputJsonValue
-    }
+        if (dto.progress !== undefined || dto.message || dto.payload) {
+          const raw = existing.result
+          const prior =
+            raw && typeof raw === 'object' && !Array.isArray(raw)
+              ? (raw as Record<string, unknown>)
+              : {}
+          data.result = {
+            ...prior,
+            ...(dto.progress !== undefined ? { progress: dto.progress } : {}),
+            ...(dto.message ? { lastMessage: dto.message } : {}),
+            ...(dto.payload ?? {}),
+          } as Prisma.InputJsonValue
+        }
 
-    return this.prisma.agentTask.update({ where: { id }, data })
+        return tx.agentTask.update({ where: { id }, data })
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    )
   }
 
   async markComplete(id: string, dto: TaskCompleteDto) {

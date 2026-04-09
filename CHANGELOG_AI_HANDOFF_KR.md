@@ -11,6 +11,45 @@
 
 ---
 
+## [0.6.1] — 2026-04-09
+
+### Phase 3.5 — Outbox 재시도 워커 + applyUpdate 원자성
+
+#### 추가
+- **`OutboxWorker`** (`apps/api/src/agents/outbox.worker.ts`)
+  - `OnModuleInit`/`OnModuleDestroy`로 관리되는 주기 `setInterval` 워커.
+  - `redis_publish_failed` prefix가 붙은 `errorLog`를 가진 `SUBMITTED`
+    상태 태스크를 배치로 조회해 `RedisService.publishTask`로 재발행.
+  - 성공 시 `errorLog`를 `null`로 clear. 실패 시 로그 warning만 남기고
+    다음 tick에 재시도.
+  - `projectId`가 없는 태스크는 dispatch 불가능하므로 건너뜀 (운영자
+    검토 대상).
+  - 환경변수: `OUTBOX_WORKER_ENABLED` (기본 true),
+    `OUTBOX_INTERVAL_MS` (기본 15000), `OUTBOX_BATCH_SIZE` (기본 25).
+  - `AgentsModule` providers에 등록.
+
+#### 변경
+- `AgentsService.applyUpdate`가 단일 `$transaction`
+  (`isolationLevel: Serializable`) 안에서 read-merge-write를 수행.
+  이전에는 `findUnique` → merge → `update`가 비원자적이어서 Orchestrator
+  콜백이 동시에 들어오면 텔레메트리가 손실될 수 있었음. 이제 DB 층에서
+  직렬화되며, 충돌 시 Prisma P2034가 발생하고 호출자는 자체 재시도
+  (Orchestrator의 TaskCallback은 fire-and-forget이므로 retry는 Phase 6
+  outbox table로 이관 예정).
+- `applyUpdate`가 `findTask`의 사전 존재 확인을 트랜잭션 내부로
+  이동시켜 race 조건을 추가 제거.
+- `startedAt`은 `status`가 이전에 `WORKING`이 아니었을 때만 세팅 (중복
+  업데이트 방지).
+
+#### 알려진 제약사항
+- Outbox는 별도 테이블이 아닌 `agent_tasks.error_log` 기반 — 일시적
+  Redis 장애에만 적합. 영구 outbox table은 Phase 6 (agent execution
+  파이프라인 강화).
+- Serializable 충돌 시 재시도 로직이 서비스 내부에는 없음. 실패는
+  500으로 노출되며 Orchestrator 쪽에서 재시도해야 함.
+
+---
+
 ## [0.6.0] — 2026-04-09
 
 ### Phase 5 — Design Hub (FR-06)

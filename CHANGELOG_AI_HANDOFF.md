@@ -11,6 +11,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.1] — 2026-04-09
+
+### Phase 3.5 — Outbox retry worker + applyUpdate atomicity
+
+#### Added
+- **`OutboxWorker`** (`apps/api/src/agents/outbox.worker.ts`)
+  - Periodic `setInterval` worker managed by `OnModuleInit` /
+    `OnModuleDestroy`.
+  - Sweeps `SUBMITTED` agent tasks whose `errorLog` starts with
+    `redis_publish_failed` and retries `RedisService.publishTask`.
+  - On success, clears `errorLog` to `null`. On failure, logs a
+    warning and leaves the row for the next tick.
+  - Skips rows without `projectId` (they can't be dispatched — left
+    for operator inspection).
+  - Env vars: `OUTBOX_WORKER_ENABLED` (default true),
+    `OUTBOX_INTERVAL_MS` (default 15000), `OUTBOX_BATCH_SIZE`
+    (default 25).
+  - Registered in `AgentsModule` providers.
+
+#### Changed
+- `AgentsService.applyUpdate` now wraps read-merge-write in a single
+  `$transaction` with `Serializable` isolation. The previous split
+  (`findUnique` → merge → `update`) lost telemetry under concurrent
+  Orchestrator callbacks. The DB now serializes conflicting updates;
+  on P2034 the error propagates and the caller retries.
+- The pre-existence check (`findTask`) is folded into the transaction
+  body, closing a smaller race window.
+- `startedAt` is only written when the row wasn't already in
+  `WORKING` state, preventing overwrite on duplicate updates.
+
+#### Known limitations
+- The outbox is `agent_tasks.error_log`-based, not a dedicated table —
+  suitable for transient Redis outages only. A durable outbox table
+  lands in Phase 6 (agent execution pipeline hardening).
+- No in-service retry on Serializable conflicts — failures surface as
+  500s and must be retried upstream by the Orchestrator.
+
+---
+
 ## [0.6.0] — 2026-04-09
 
 ### Phase 5 — Design Hub (FR-06)
