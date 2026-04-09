@@ -11,6 +11,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] — 2026-04-09
+
+### Phase 2 — Orchestrator skeleton
+
+#### Added
+- **Phoenix Orchestrator OTP tree** (`apps/orchestrator/lib/`)
+  - `Orchestrator.AgentRegistry` — GenServer tracking online agents by `agent_type`;
+    uses `Process.monitor` to auto-evict on channel crash; `touch/1` for heartbeats.
+  - `Orchestrator.ProjectSupervisor` — `DynamicSupervisor` for per-project
+    orchestrator processes (failure isolation between projects).
+  - `Orchestrator.ProjectOrchestrator` — per-project `GenServer` registered via
+    `{:via, Registry, …}` in `Orchestrator.ProjectRegistry`; holds in-flight task
+    state and forwards to dispatcher.
+  - `Orchestrator.RedisConsumer` — `XREADGROUP` loop on `orchestrator:tasks`
+    stream (consumer group `orchestrator`); lazy-starts missing
+    `ProjectOrchestrator` processes; XACKs handled/unprocessable entries.
+  - `Orchestrator.TaskDispatcher` — round-robin dispatcher selecting an agent
+    of the required `agent_type` from `AgentRegistry` and sending
+    `{:dispatch_task, payload}` to the channel pid.
+  - `Orchestrator.HeartbeatMonitor` — 10s tick, unregisters agents whose
+    `last_seen` is older than 30s.
+- **Phoenix web layer** (`apps/orchestrator/lib/orchestrator_web/`)
+  - `OrchestratorWeb.HealthController` (`GET /health`) — reports agents online
+    and running projects count.
+  - `OrchestratorWeb.OrchestrationController` — `POST /api/orchestrate/:project_id/{start,stop}`,
+    `GET /api/orchestrate/:project_id/status`, `POST /api/agents/register`.
+  - `OrchestratorWeb.ErrorJSON` — referenced from `config.exs`.
+  - `OrchestratorWeb.AgentChannel` (`agent:<agent_id>` topic) — on join,
+    registers the channel pid in `AgentRegistry`; handles `heartbeat`,
+    `task:update`, `task:complete`; pushes `task:dispatch` events from
+    dispatcher.
+- **Application supervision tree** (`application.ex`): added
+  `{Registry, keys: :unique, name: Orchestrator.ProjectRegistry}` to support
+  via-tuple lookup of `ProjectOrchestrator` processes, and
+  `{Task.Supervisor, name: Orchestrator.TaskSupervisor}` for async HTTP
+  callbacks.
+- **`Orchestrator.TaskCallback`** (`lib/orchestrator/task_callback.ex`) —
+  forwards `task:update` / `task:complete` events from agents to the API
+  server via `Req.post/2` running under `Orchestrator.TaskSupervisor`
+  (fire-and-forget, 5s timeout). Posts to
+  `POST {api_url}/internal/tasks/:task_id/updates` and
+  `POST .../complete` with `Authorization: Bearer {orchestrator_secret}`.
+  Failures log only — retries deferred to Phase 3 outbox.
+- **`AgentChannel`** now calls `TaskCallback.report_update/3` and
+  `report_complete/3` instead of only logging.
+- **`OrchestrationController.register_agent`** returns 202 Accepted with
+  `canonical_path: "/socket/websocket"` and a note that real registration
+  happens on WebSocket join.
+- **Integration test skeletons** (`@moduletag :integration` / `:redis`,
+  excluded from default runs):
+  - `test/support/channel_case.ex`, `test/support/conn_case.ex` —
+    standard Phoenix test case templates.
+  - `test/orchestrator_web/agent_channel_test.exs` — join, heartbeat,
+    task:update/complete, dispatch routing.
+  - `test/orchestrator_web/orchestration_controller_test.exs` —
+    start/stop/status/register endpoints + AuthPlug check.
+  - `test/orchestrator/redis_consumer_test.exs` — XADD/XREADGROUP/XACK
+    flow (requires live Redis).
+  Tests are marked `:skip` pending real fixture wiring; stubs document
+  expected assertions so Phase 3 can fill them in.
+
+#### Tests (unit, no external deps)
+| Test file | Target module | SRS FR |
+|---|---|---|
+| `test/orchestrator/agent_registry_test.exs` | `AgentRegistry` | FR-04-08, FR-05-01 |
+| `test/orchestrator/task_dispatcher_test.exs` | `TaskDispatcher` | FR-04-01 |
+| `test/orchestrator/project_supervisor_test.exs` | `ProjectSupervisor`, `ProjectOrchestrator` | FR-04-09 |
+| `test/orchestrator/heartbeat_monitor_test.exs` | `HeartbeatMonitor` | FR-04-08 |
+
+Coverage highlights:
+- Register/lookup/unregister, per-type listing, heartbeat touch,
+  automatic cleanup on channel-pid `:DOWN`.
+- Round-robin dispatch across N agents, no-agent fallback, default
+  `agent_type` handling.
+- Per-project supervision: start, duplicate rejection, stop, failure
+  isolation between projects, status snapshot.
+- Heartbeat sweep: stale eviction, fresh retention via `touch/1`.
+
+#### Changed
+- `HeartbeatMonitor` now accepts `:interval_ms` and `:timeout_seconds`
+  options (defaults unchanged at 10s / 30s); added synchronous
+  `sweep/1` so tests can exercise eviction without waiting for the
+  scheduled tick.
+- `mix.exs` test alias no longer runs `ecto.create`/`ecto.migrate`, so
+  the unit suite runs without Postgres. A separate integration alias
+  will be added when DB-backed tests arrive.
+- `test/test_helper.exs` stops `:orchestrator` before `ExUnit.start/0`
+  so tests own their supervision via `start_supervised!`, avoiding
+  conflicts with auto-started singletons (`AgentRegistry`, etc.). Now
+  excludes `:integration`, `:redis`, and `:skip` tags by default. Run
+  integration tests with `mix test --include integration` (requires
+  Phoenix Endpoint + AgentRegistry booted).
+- `mix.exs` version bumped `0.1.0` → `0.3.0` to match the release.
+- `config/config.exs` declares default `:api_url` / `:orchestrator_secret`;
+  env-specific values are supplied by `dev.exs` / `prod.exs` (`API_URL` /
+  `ORCHESTRATOR_SECRET`).
+
+#### Known limitations (Phase 3 follow-up)
+- TaskCallback has no retry / dead-letter queue — failed callbacks are
+  logged and dropped. Phase 3 introduces an outbox pattern.
+- The API side (`POST /internal/tasks/:id/updates` and `/complete`) is
+  not yet implemented; API returns 404 until Phase 3 adds these routes.
+- `mix test` / `mix compile` not executed in this environment (Elixir
+  toolchain absent). Run
+  `cd apps/orchestrator && mix deps.get && mix test` locally to verify.
+- Integration test bodies are `:skip`-tagged placeholders; real
+  assertions require Phoenix Endpoint fixtures + `Req.Test` stubs.
+
+---
+
 ## [0.2.0] — 2026-04-08
 
 ### Phase 1 — Authentication, CRM & Project Management

@@ -11,6 +11,115 @@
 
 ---
 
+## [0.3.0] — 2026-04-09
+
+### Phase 2 — Orchestrator 스켈레톤
+
+#### 추가
+- **Phoenix Orchestrator OTP 트리** (`apps/orchestrator/lib/`)
+  - `Orchestrator.AgentRegistry` — `agent_type` 별로 온라인 에이전트를 추적하는
+    GenServer. `Process.monitor`로 채널 프로세스가 죽으면 자동 제거,
+    `touch/1`로 heartbeat 시각 갱신.
+  - `Orchestrator.ProjectSupervisor` — 프로젝트별 오케스트레이터 프로세스를
+    동적으로 기동하는 `DynamicSupervisor` (프로젝트 간 장애 격리).
+  - `Orchestrator.ProjectOrchestrator` — 프로젝트 단위 `GenServer`.
+    `{:via, Registry, …}` (`Orchestrator.ProjectRegistry`)로 이름 등록되며
+    in-flight 작업 상태를 보유하고 디스패처로 작업을 전달.
+  - `Orchestrator.RedisConsumer` — `orchestrator:tasks` 스트림을
+    `XREADGROUP` 루프로 소비 (consumer group: `orchestrator`). 해당
+    `ProjectOrchestrator`가 없으면 lazy-start, 처리/비처리 엔트리 모두 XACK.
+  - `Orchestrator.TaskDispatcher` — `agent_type`을 보고 `AgentRegistry`에서
+    round-robin으로 에이전트 선택 후, 채널 pid에 `{:dispatch_task, payload}`
+    메시지를 전송.
+  - `Orchestrator.HeartbeatMonitor` — 10초 주기로 스캔, `last_seen`이 30초를
+    초과한 에이전트를 unregister.
+- **Phoenix 웹 레이어** (`apps/orchestrator/lib/orchestrator_web/`)
+  - `OrchestratorWeb.HealthController` (`GET /health`) — 온라인 에이전트 수 /
+    실행 중 프로젝트 수 리포트.
+  - `OrchestratorWeb.OrchestrationController` —
+    `POST /api/orchestrate/:project_id/{start,stop}`,
+    `GET /api/orchestrate/:project_id/status`,
+    `POST /api/agents/register`.
+  - `OrchestratorWeb.ErrorJSON` — `config.exs`에서 참조되는 에러 뷰.
+  - `OrchestratorWeb.AgentChannel` (`agent:<agent_id>` 토픽) — join 시 채널 pid를
+    `AgentRegistry`에 등록, `heartbeat`/`task:update`/`task:complete` 수신,
+    디스패처가 보낸 `task:dispatch` 이벤트를 push.
+- **Application 수퍼비전 트리** (`application.ex`):
+  `{Registry, keys: :unique, name: Orchestrator.ProjectRegistry}` 추가 —
+  `ProjectOrchestrator` via-tuple 조회 지원.
+  `{Task.Supervisor, name: Orchestrator.TaskSupervisor}`도 추가 — HTTP
+  콜백 비동기 실행용.
+- **`Orchestrator.TaskCallback`** (`lib/orchestrator/task_callback.ex`) —
+  에이전트의 `task:update` / `task:complete` 이벤트를 API 서버로
+  `Req.post/2` 호출로 전달. `Orchestrator.TaskSupervisor` 하위에서
+  fire-and-forget(5초 타임아웃)으로 실행. 엔드포인트:
+  `POST {api_url}/internal/tasks/:task_id/updates`,
+  `POST .../complete`. `Authorization: Bearer {orchestrator_secret}`
+  헤더. 실패 시 로그만 남기며 재시도는 Phase 3 outbox로 이관.
+- **`AgentChannel`**이 로그 대신 `TaskCallback.report_update/3` /
+  `report_complete/3`를 호출하도록 변경.
+- **`OrchestrationController.register_agent`**가 202 Accepted +
+  `canonical_path: "/socket/websocket"` + 안내 문구 반환 (실제 등록은
+  WebSocket join 경로라는 점 명시).
+- **통합 테스트 스켈레톤** (`@moduletag :integration` / `:redis`,
+  기본 실행에서 제외):
+  - `test/support/channel_case.ex`, `test/support/conn_case.ex` —
+    Phoenix 표준 테스트 case 템플릿.
+  - `test/orchestrator_web/agent_channel_test.exs` — join, heartbeat,
+    task:update/complete, dispatch 라우팅.
+  - `test/orchestrator_web/orchestration_controller_test.exs` —
+    start/stop/status/register 엔드포인트 + AuthPlug 검증.
+  - `test/orchestrator/redis_consumer_test.exs` — XADD/XREADGROUP/XACK
+    흐름 (라이브 Redis 필요).
+  테스트 본문은 `:skip` 태그로 placeholder. 실제 fixture 연결은 Phase 3.
+
+#### 테스트 (유닛, 외부 의존 없음)
+| 테스트 파일 | 대상 모듈 | SRS FR |
+|---|---|---|
+| `test/orchestrator/agent_registry_test.exs` | `AgentRegistry` | FR-04-08, FR-05-01 |
+| `test/orchestrator/task_dispatcher_test.exs` | `TaskDispatcher` | FR-04-01 |
+| `test/orchestrator/project_supervisor_test.exs` | `ProjectSupervisor`, `ProjectOrchestrator` | FR-04-09 |
+| `test/orchestrator/heartbeat_monitor_test.exs` | `HeartbeatMonitor` | FR-04-08 |
+
+커버리지 요약:
+- 에이전트 등록/조회/해제, 타입별 필터, heartbeat touch, 채널 pid
+  `:DOWN` 시 자동 정리.
+- N개 에이전트 round-robin 디스패치, 에이전트 부재 fallback, 기본
+  `agent_type` 처리.
+- 프로젝트별 수퍼비전: start, 중복 거부, stop, 프로젝트 간 장애 격리,
+  status 스냅샷.
+- Heartbeat sweep: stale 축출, `touch/1`로 fresh 유지.
+
+#### 변경
+- `HeartbeatMonitor`가 `:interval_ms`, `:timeout_seconds` 옵션을 받도록
+  리팩터 (기본값은 10s / 30s로 동일). 동기 `sweep/1` 추가 — 테스트가
+  타이머 tick을 기다리지 않고 축출 동작을 검증할 수 있도록.
+- `mix.exs`의 test alias에서 `ecto.create`/`ecto.migrate`를 제거. 유닛
+  테스트는 Postgres 없이 실행됨. DB 기반 테스트가 추가될 때는 별도
+  integration alias를 만들 예정.
+- `test/test_helper.exs`가 `ExUnit.start/0` 전에 `:orchestrator`
+  애플리케이션을 중단. 테스트가 `start_supervised!`로 직접 수퍼비전
+  트리를 소유하여, 자동 기동된 싱글턴(`AgentRegistry` 등)과 충돌 방지.
+  이제 `:integration`, `:redis`, `:skip` 태그를 기본 제외. 통합 테스트는
+  `mix test --include integration`로 실행 (Phoenix Endpoint +
+  AgentRegistry 부팅 필요).
+- `mix.exs` 버전 `0.1.0` → `0.3.0`으로 릴리스에 맞춰 범프.
+- `config/config.exs`에 `:api_url` / `:orchestrator_secret` 기본값 선언.
+  환경별 값은 `dev.exs` / `prod.exs` (`API_URL` / `ORCHESTRATOR_SECRET`)
+  에서 주입.
+
+#### 알려진 제약사항 (Phase 3 후속)
+- TaskCallback은 재시도 / dead-letter 없음 — 실패 콜백은 로그만 남기고
+  버림. Phase 3에서 outbox 패턴 도입.
+- API 쪽 (`POST /internal/tasks/:id/updates`, `/complete`) 아직 미구현.
+  Phase 3에서 해당 라우트 추가 전까지 API는 404 응답.
+- 이 환경에 Elixir 툴체인 부재로 `mix compile` / `mix test` 미실행.
+  로컬에서 `cd apps/orchestrator && mix deps.get && mix test` 실행 필요.
+- 통합 테스트 본문은 `:skip`로 placeholder. 실제 assertion은 Phoenix
+  Endpoint fixture + `Req.Test` stub 연결 후 작성.
+
+---
+
 ## [0.2.0] — 2026-04-08
 
 ### Phase 1 — 인증, CRM, 프로젝트 관리

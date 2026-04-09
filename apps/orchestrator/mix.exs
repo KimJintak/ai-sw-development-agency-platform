@@ -4,7 +4,7 @@ defmodule Orchestrator.MixProject do
   def project do
     [
       app: :orchestrator,
-      version: "0.1.0",
+      version: "0.3.0",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -55,7 +55,9 @@ defmodule Orchestrator.MixProject do
       setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+      # Unit tests do not require Postgres. Integration tests that hit
+      # the DB should use a dedicated alias that first runs ecto.create/migrate.
+      test: ["test"]
     ]
   end
 end
