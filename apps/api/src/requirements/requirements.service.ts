@@ -1,0 +1,158 @@
+import { Injectable, NotFoundException } from '@nestjs/common'
+import { Platform, Prisma, RequirementStatus } from '@prisma/client'
+import { PrismaService } from '../prisma/prisma.service'
+import {
+  ApproveRequirementDto,
+  CreateRequirementDto,
+  LinkWorkItemDto,
+  UpdateRequirementDto,
+} from './dto/requirement.dto'
+
+@Injectable()
+export class RequirementsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  findByProject(projectId: string) {
+    return this.prisma.requirement.findMany({
+      where: { projectId },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        _count: { select: { versions: true, requirementLinks: true } },
+      },
+    })
+  }
+
+  async findOne(id: string) {
+    const requirement = await this.prisma.requirement.findUnique({
+      where: { id },
+      include: {
+        versions: { orderBy: { version: 'desc' } },
+        requirementLinks: {
+          include: {
+            workItem: { select: { id: true, title: true, status: true, type: true } },
+          },
+        },
+      },
+    })
+    if (!requirement) throw new NotFoundException(`Requirement ${id} not found`)
+    return requirement
+  }
+
+  async create(dto: CreateRequirementDto, createdBy: string) {
+    // Creates the Requirement and its initial version (v1) in one
+    // transaction so the versions table always has a row per live
+    // Requirement.
+    return this.prisma.$transaction(async (tx) => {
+      const requirement = await tx.requirement.create({
+        data: {
+          projectId: dto.projectId,
+          title: dto.title,
+          featureFile: dto.featureFile,
+          platforms: dto.platforms as Platform[],
+          status: RequirementStatus.DRAFT,
+          version: 1,
+        },
+      })
+
+      await tx.requirementVersion.create({
+        data: {
+          requirementId: requirement.id,
+          version: 1,
+          featureFile: dto.featureFile,
+          changedBy: createdBy,
+          changeNote: 'Initial draft',
+        },
+      })
+
+      return requirement
+    })
+  }
+
+  /**
+   * Editing the feature file content creates a new RequirementVersion
+   * (FR-03-04 — 버전 이력 보존). Non-content edits (status change,
+   * platform retagging) do NOT increment the version.
+   */
+  async update(id: string, dto: UpdateRequirementDto, changedBy: string) {
+    const current = await this.findOne(id)
+
+    const contentChanged =
+      (dto.featureFile !== undefined && dto.featureFile !== current.featureFile) ||
+      (dto.title !== undefined && dto.title !== current.title)
+
+    return this.prisma.$transaction(async (tx) => {
+      const updateData: Prisma.RequirementUpdateInput = {}
+
+      if (dto.title !== undefined) updateData.title = dto.title
+      if (dto.platforms !== undefined) updateData.platforms = { set: dto.platforms as Platform[] }
+      if (dto.status !== undefined) updateData.status = dto.status as RequirementStatus
+
+      if (contentChanged) {
+        const nextVersion = current.version + 1
+        updateData.version = nextVersion
+        if (dto.featureFile !== undefined) updateData.featureFile = dto.featureFile
+
+        await tx.requirementVersion.create({
+          data: {
+            requirementId: id,
+            version: nextVersion,
+            featureFile: dto.featureFile ?? current.featureFile,
+            changedBy,
+            changeNote: dto.changeNote ?? null,
+          },
+        })
+      }
+
+      return tx.requirement.update({
+        where: { id },
+        data: updateData,
+      })
+    })
+  }
+
+  async approve(id: string, dto: ApproveRequirementDto) {
+    await this.findOne(id)
+    return this.prisma.requirement.update({
+      where: { id },
+      data: {
+        status: RequirementStatus.APPROVED,
+        approvedBy: dto.approvedBy,
+        approvedAt: new Date(),
+      },
+    })
+  }
+
+  listVersions(id: string) {
+    return this.prisma.requirementVersion.findMany({
+      where: { requirementId: id },
+      orderBy: { version: 'desc' },
+    })
+  }
+
+  async linkWorkItem(id: string, dto: LinkWorkItemDto) {
+    await this.findOne(id)
+    return this.prisma.requirementLink.create({
+      data: { requirementId: id, workItemId: dto.workItemId },
+    })
+  }
+
+  async unlinkWorkItem(id: string, workItemId: string) {
+    return this.prisma.requirementLink.delete({
+      where: {
+        requirementId_workItemId: { requirementId: id, workItemId },
+      },
+    })
+  }
+
+  async remove(id: string) {
+    await this.findOne(id)
+    // RequirementVersion / RequirementLink rows must go first to
+    // satisfy FK constraints; Prisma doesn't cascade automatically
+    // for these relations.
+    return this.prisma.$transaction([
+      this.prisma.requirementLink.deleteMany({ where: { requirementId: id } }),
+      this.prisma.requirementVersion.deleteMany({ where: { requirementId: id } }),
+      this.prisma.requirement.delete({ where: { id } }),
+    ])
+  }
+}

@@ -11,6 +11,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] — 2026-04-09
+
+### Phase 4 — Requirements management (FR-03)
+
+#### Added
+- **`RequirementsModule`** (`apps/api/src/requirements/`)
+  - `RequirementsService` — Prisma CRUD over `Requirement` /
+    `RequirementVersion` / `RequirementLink`; every write runs inside
+    `$transaction`.
+  - Feature-file or title changes snapshot a new `RequirementVersion`
+    row and increment `version` (FR-03-04 — history retention).
+    Status/platform-only edits do NOT bump the version.
+  - `create` writes the Requirement + initial `v1` version in one
+    transaction.
+  - `remove` deletes `requirement_links` → `requirement_versions` →
+    `requirement` in order to satisfy FK constraints.
+  - `RequirementsController` (JWT) —
+    `GET /api/requirements?projectId=`, `GET /api/requirements/:id`
+    (with versions + linked work items), `GET /:id/versions`,
+    `POST /api/requirements`, `PATCH /:id`, `POST /:id/approve`,
+    `POST /:id/links`, `DELETE /:id/links/:workItemId`, `DELETE /:id`.
+  - DTOs: `CreateRequirementDto`, `UpdateRequirementDto` (with
+    `changeNote`), `ApproveRequirementDto`, `LinkWorkItemDto`.
+    `Platform` enum is `MACOS/WINDOWS/IOS/ANDROID/WEB/LINUX`.
+  - `@CurrentUser()` injects `changedBy`.
+- **`app.module.ts`** imports `RequirementsModule`.
+- **Admin UI — `/projects/:id/requirements` page**
+  (`apps/web/app/(admin)/projects/[id]/requirements/page.tsx`) — list
+  + new-requirement form (title, platform toggles, feature-file textarea
+  with a Gherkin template). Shows version count / linked work-item
+  count. Matches the existing `SUB_NAV` `Requirements` tab.
+
+#### Known limitations
+- No in-place edit UI yet (list + create only). The PATCH endpoint
+  exists and can be invoked via curl.
+- PM Agent auto-generation (FR-03-03) is deferred to Phase 7+ (after
+  the agent execution pipeline matures).
+- No Gherkin syntax validation — malformed feature files are stored
+  as-is.
+- `linkWorkItem` does not pre-validate the work item; FK violations
+  surface as 500s.
+
+---
+
 ## [0.4.0] — 2026-04-09
 
 ### Phase 3 — Orchestrator↔API integration closure + Agents module

@@ -8,6 +8,7 @@ import { CrmModule } from './crm/crm.module'
 import { ProjectsModule } from './projects/projects.module'
 import { WorkItemsModule } from './work-items/work-items.module'
 import { AgentsModule } from './agents/agents.module'
+import { RequirementsModule } from './requirements/requirements.module'
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AgentsModule } from './agents/agents.module'
     ProjectsModule,
     WorkItemsModule,
     AgentsModule,
+    RequirementsModule,
   ],
 })
 export class AppModule {}

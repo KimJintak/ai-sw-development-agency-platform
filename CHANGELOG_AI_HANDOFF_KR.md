@@ -11,6 +11,49 @@
 
 ---
 
+## [0.5.0] — 2026-04-09
+
+### Phase 4 — 요구사항 관리 (FR-03)
+
+#### 추가
+- **`RequirementsModule`** (`apps/api/src/requirements/`)
+  - `RequirementsService` — Prisma 기반 `Requirement` / `RequirementVersion` /
+    `RequirementLink` CRUD. 모든 쓰기 작업은 `$transaction` 사용.
+  - Feature file 또는 title 변경 시 `RequirementVersion`에 스냅샷을
+    남기고 `version`을 증가시킴 (FR-03-04 — 변경 이력 보존). status /
+    platforms 만 변경되는 경우는 버전을 증가시키지 않음.
+  - `create`는 Requirement + 초기 `v1` RequirementVersion을 단일
+    트랜잭션으로 생성.
+  - `remove`는 requirement_links → requirement_versions → requirement
+    순으로 FK 제약을 만족하며 삭제.
+  - `RequirementsController` (JWT 인증) —
+    `GET /api/requirements?projectId=`, `GET /api/requirements/:id`
+    (versions + linked work items 포함), `GET /:id/versions`,
+    `POST /api/requirements`, `PATCH /:id`, `POST /:id/approve`,
+    `POST /:id/links`, `DELETE /:id/links/:workItemId`, `DELETE /:id`.
+  - DTO: `CreateRequirementDto` (projectId/title/featureFile/platforms
+    필수), `UpdateRequirementDto` (모두 optional + changeNote),
+    `ApproveRequirementDto`, `LinkWorkItemDto`. `Platform` enum은
+    `MACOS/WINDOWS/IOS/ANDROID/WEB/LINUX`.
+  - `@CurrentUser()`로 `changedBy` 자동 주입.
+- **`app.module.ts`**에 `RequirementsModule` import.
+- **Admin UI — `/projects/:id/requirements` 페이지**
+  (`apps/web/app/(admin)/projects/[id]/requirements/page.tsx`) —
+  요구사항 목록 + 새 요구사항 생성 폼 (제목, 플랫폼 토글, feature file
+  textarea + 템플릿 pre-fill). 버전 수 / 연결된 work item 수를 카운터로
+  표시. 기존 `SUB_NAV`의 `Requirements` 링크와 일치.
+
+#### 알려진 제약사항
+- Requirement 편집 UI는 미구현 (현재는 목록 + 생성만). PATCH 엔드포인트는
+  존재하며 curl로 호출 가능.
+- PM Agent 자동 생성 (FR-03-03)은 Phase 7 이후 — 에이전트 실행 파이프라인
+  성숙 이후.
+- Feature file 문법 검증 없음. 잘못된 Gherkin도 그대로 저장됨.
+- linkWorkItem은 work item 존재 여부를 사전 검증하지 않음 — Prisma FK
+  위반 에러가 500으로 노출됨.
+
+---
+
 ## [0.4.0] — 2026-04-09
 
 ### Phase 3 — Orchestrator↔API 통합 마감 + Agents 모듈
