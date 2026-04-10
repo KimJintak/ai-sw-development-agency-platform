@@ -11,6 +11,63 @@
 
 ---
 
+## [0.7.0] — 2026-04-10
+
+### Phase 6 — QA & 테스트 관리 (FR-07)
+
+#### 추가
+- **`QaModule`** (`apps/api/src/qa/`)
+  - `QaService` — Prisma 기반 `TestCase` / `TestRun` / `TestResult` CRUD.
+    `findTestCases(workItemId, platform?)`, `findTestRuns(releaseId, status?)`,
+    `recordResult`, `getRunSummary` (pass/fail/skip 집계),
+    `getProjectCoverage` (프로젝트 전체 테스트 커버리지 통계) 메서드 제공.
+  - `createTestRun` 시 status는 `PENDING`으로 초기화.
+    `updateTestRun`에서 `RUNNING`으로 변경 시 `startedAt` 자동 세팅,
+    `COMPLETED`/`FAILED`로 변경 시 `endedAt` 자동 세팅.
+  - `removeTestCase`는 test_results → test_case 순으로 트랜잭션 삭제.
+    `removeTestRun`도 동일 패턴.
+  - `QaController` (JWT 인증) —
+    `GET /api/qa/test-cases?workItemId=&platform=`,
+    `GET /api/qa/test-cases/:id`,
+    `POST /api/qa/test-cases`,
+    `PATCH /api/qa/test-cases/:id`,
+    `DELETE /api/qa/test-cases/:id`,
+    `GET /api/qa/test-runs?releaseId=&status=`,
+    `GET /api/qa/test-runs/:id`,
+    `POST /api/qa/test-runs`,
+    `PATCH /api/qa/test-runs/:id`,
+    `DELETE /api/qa/test-runs/:id`,
+    `POST /api/qa/test-runs/:runId/results`,
+    `GET /api/qa/test-runs/:runId/results`,
+    `GET /api/qa/test-runs/:runId/summary`,
+    `GET /api/qa/coverage/:projectId`.
+  - DTO: `CreateTestCaseDto` (workItemId/title/scenario 필수, platform
+    optional), `UpdateTestCaseDto`, `CreateTestRunDto` (releaseId/platform
+    필수), `UpdateTestRunDto`, `RecordTestResultDto`
+    (testCaseId/status 필수, duration/errorLog optional),
+    `ListTestCasesQuery`, `ListTestRunsQuery`.
+- **`app.module.ts`**에 `QaModule` import.
+- **Admin UI — `/projects/:id/qa` 페이지**
+  (`apps/web/app/(admin)/projects/[id]/qa/page.tsx`)
+  - 프로젝트 커버리지 요약 카드 (커버리지 %, 테스트 케이스 수,
+    커버된 Work Item 수, 전체 Work Item 수).
+  - 2-column 레이아웃: 좌측 Work Item 리스트 (타입/상태 배지),
+    우측 해당 Work Item의 테스트 케이스 목록.
+  - 테스트 케이스 생성 폼: 제목, 시나리오 (Gherkin 스타일 placeholder),
+    플랫폼 선택. 생성 후 리스트 + 커버리지 자동 갱신.
+  - 기존 `SUB_NAV`의 `QA` 링크와 일치.
+
+#### 알려진 제약사항
+- TestRun은 Release에 연결되므로, Release 모듈이 없는 현재 상태에서는
+  API로만 TestRun 생성 가능 (Admin UI에서는 TestCase만 관리).
+  Release 모듈은 Phase 7에서 구현 예정.
+- Test Agent 자동 실행 (FR-07-03)은 에이전트 실행 파이프라인 성숙 이후.
+- 테스트 케이스 편집/삭제 UI 미구현. PATCH/DELETE 엔드포인트는 존재.
+- TestResult의 errorLog 크기 제한 없음 — 대용량 로그 저장 시
+  별도 스토리지 연동 필요 (Phase 8 이후).
+
+---
+
 ## [0.6.1] — 2026-04-09
 
 ### Phase 3.5 — Outbox 재시도 워커 + applyUpdate 원자성

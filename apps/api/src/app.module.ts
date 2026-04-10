@@ -10,6 +10,7 @@ import { WorkItemsModule } from './work-items/work-items.module'
 import { AgentsModule } from './agents/agents.module'
 import { RequirementsModule } from './requirements/requirements.module'
 import { DesignModule } from './design/design.module'
+import { QaModule } from './qa/qa.module'
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DesignModule } from './design/design.module'
     AgentsModule,
     RequirementsModule,
     DesignModule,
+    QaModule,
   ],
 })
 export class AppModule {}

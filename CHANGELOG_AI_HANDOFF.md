@@ -11,6 +11,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] — 2026-04-10
+
+### Phase 6 — QA & Test Management (FR-07)
+
+#### Added
+- **`QaModule`** (`apps/api/src/qa/`)
+  - `QaService` — Prisma-based `TestCase` / `TestRun` / `TestResult` CRUD.
+    Methods: `findTestCases(workItemId, platform?)`,
+    `findTestRuns(releaseId, status?)`, `recordResult`,
+    `getRunSummary` (pass/fail/skip aggregation),
+    `getProjectCoverage` (project-wide test coverage stats).
+  - `createTestRun` initialises status as `PENDING`.
+    `updateTestRun` auto-sets `startedAt` when status changes to
+    `RUNNING`, and `endedAt` when `COMPLETED` or `FAILED`.
+  - `removeTestCase` deletes test_results → test_case in a transaction.
+    `removeTestRun` follows the same pattern.
+  - `QaController` (JWT auth) —
+    `GET /api/qa/test-cases?workItemId=&platform=`,
+    `GET /api/qa/test-cases/:id`, `POST /api/qa/test-cases`,
+    `PATCH /api/qa/test-cases/:id`, `DELETE /api/qa/test-cases/:id`,
+    `GET /api/qa/test-runs?releaseId=&status=`,
+    `GET /api/qa/test-runs/:id`, `POST /api/qa/test-runs`,
+    `PATCH /api/qa/test-runs/:id`, `DELETE /api/qa/test-runs/:id`,
+    `POST /api/qa/test-runs/:runId/results`,
+    `GET /api/qa/test-runs/:runId/results`,
+    `GET /api/qa/test-runs/:runId/summary`,
+    `GET /api/qa/coverage/:projectId`.
+  - DTOs: `CreateTestCaseDto`, `UpdateTestCaseDto`, `CreateTestRunDto`,
+    `UpdateTestRunDto`, `RecordTestResultDto`, `ListTestCasesQuery`,
+    `ListTestRunsQuery`.
+- **`app.module.ts`** — `QaModule` import added.
+- **Admin UI — `/projects/:id/qa` page**
+  (`apps/web/app/(admin)/projects/[id]/qa/page.tsx`)
+  - Project coverage summary cards (coverage %, test case count,
+    covered work items, total work items).
+  - 2-column layout: left sidebar with work item list (type/status
+    badges), right panel with test cases for the selected work item.
+  - Test case creation form: title, scenario (Gherkin-style placeholder),
+    platform selector. Auto-refreshes list + coverage after creation.
+
+#### Known Limitations
+- TestRun is linked to Release; without the Release module, TestRuns
+  can only be created via API. Release module planned for Phase 7.
+- Test Agent auto-execution (FR-07-03) deferred until agent execution
+  pipeline matures.
+- No edit/delete UI for test cases. PATCH/DELETE endpoints exist.
+- No size limit on TestResult errorLog — large log storage integration
+  deferred to Phase 8+.
+
+---
+
 ## [0.6.1] — 2026-04-09
 
 ### Phase 3.5 — Outbox retry worker + applyUpdate atomicity
