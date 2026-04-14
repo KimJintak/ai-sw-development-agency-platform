@@ -14,7 +14,12 @@ import {
   Activity,
   CheckCircle2,
   Info,
+  Bug,
+  FlaskConical,
+  Lightbulb,
+  X,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 export function DemoPlayer({ scenario }: { scenario: DemoScenario }) {
   const runner = useDemoRunner(scenario)
@@ -31,6 +36,23 @@ export function DemoPlayer({ scenario }: { scenario: DemoScenario }) {
   const dispatched = runner.activeSteps.find((s) => s.kind === 'dispatchTask')
   const agentUpdate = runner.activeSteps.find((s) => s.kind === 'agentUpdate')
   const completed = runner.activeSteps.find((s) => s.kind === 'taskComplete')
+  const bug = runner.activeSteps.find((s) => s.kind === 'bugReport')?.data as
+    | { id: string; severity: string; title: string; stack: string }
+    | undefined
+  const autoFix = runner.activeSteps.find((s) => s.kind === 'autoFix')?.data as
+    | { pr: number; diff: string }
+    | undefined
+  const reviewApproved = runner.activeSteps.find((s) => s.kind === 'reviewApproved')
+  const testRuns = runner.activeSteps
+    .filter((s) => s.kind === 'testRun')
+    .map((s) => s.data as { platform: string; passed: number; total: number })
+  const testReport = runner.activeSteps.find((s) => s.kind === 'testReport')?.data as
+    | { coverage: number; newCoverage: number }
+    | undefined
+
+  const hasProjectFlow = project || requirements.length > 0 || design
+  const hasBugFlow = bug || autoFix || reviewApproved
+  const hasQaFlow = testRuns.length > 0 || testReport
 
   return (
     <div className="space-y-6">
@@ -45,60 +67,145 @@ export function DemoPlayer({ scenario }: { scenario: DemoScenario }) {
 
       <ProgressBar runner={runner} scenario={scenario} />
 
+      <CalloutOverlay step={runner.currentStep} />
+
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-8 space-y-4">
-          <Panel title="프로젝트" icon={<FolderPlus size={16} />} ready={!!project}>
-            {project ? (
-              <div className="space-y-2 text-sm">
-                <Row label="이름" value={project.name} />
-                <Row label="고객사" value={project.customer} />
-                <Row label="플랫폼" value={project.platforms.join(', ')} />
-                <Row label="레포" value={project.repo} />
-              </div>
-            ) : (
-              <Empty>아직 프로젝트가 없습니다.</Empty>
-            )}
-          </Panel>
+          {hasProjectFlow && (
+            <>
+              <Panel title="프로젝트" icon={<FolderPlus size={16} />} ready={!!project} highlight={runner.currentStep?.callout?.target === 'project'}>
+                {project ? (
+                  <div className="space-y-2 text-sm">
+                    <Row label="이름" value={project.name} />
+                    <Row label="고객사" value={project.customer} />
+                    <Row label="플랫폼" value={project.platforms.join(', ')} />
+                    <Row label="레포" value={project.repo} />
+                  </div>
+                ) : (
+                  <Empty>아직 프로젝트가 없습니다.</Empty>
+                )}
+              </Panel>
 
-          <Panel
-            title={`요구사항 (${requirements.length})`}
-            icon={<FileText size={16} />}
-            ready={requirements.length > 0}
-          >
-            {requirements.length === 0 ? (
-              <Empty>요구사항 입력 대기 중.</Empty>
-            ) : (
-              <div className="space-y-3">
-                {requirements.map((r) => (
-                  <div key={r.id} className="border rounded-md p-3 bg-muted/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">
-                        {r.id}
-                      </span>
-                      <span className="font-medium text-sm">{r.title}</span>
+              <Panel
+                title={`요구사항 (${requirements.length})`}
+                icon={<FileText size={16} />}
+                ready={requirements.length > 0}
+                highlight={runner.currentStep?.callout?.target === 'requirements'}
+              >
+                {requirements.length === 0 ? (
+                  <Empty>요구사항 입력 대기 중.</Empty>
+                ) : (
+                  <div className="space-y-3">
+                    {requirements.map((r) => (
+                      <div key={r.id} className="border rounded-md p-3 bg-muted/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">
+                            {r.id}
+                          </span>
+                          <span className="font-medium text-sm">{r.title}</span>
+                        </div>
+                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+                          {r.text}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+
+              <Panel
+                title="설계 — 아키텍처 다이어그램"
+                icon={<GitBranch size={16} />}
+                ready={!!design}
+                highlight={runner.currentStep?.callout?.target === 'design'}
+              >
+                {design ? (
+                  <div className="bg-white rounded-md p-4 border">
+                    <MermaidViewer code={design.mermaid} />
+                  </div>
+                ) : (
+                  <Empty>요구사항이 수집되면 자동 생성됩니다.</Empty>
+                )}
+              </Panel>
+            </>
+          )}
+
+          {hasBugFlow && (
+            <Panel title="버그 & 자동 수정" icon={<Bug size={16} />} ready={!!bug} highlight={runner.currentStep?.callout?.target === 'bugs'}>
+              {bug ? (
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-600">
+                      {bug.id}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 font-medium">
+                      {bug.severity}
+                    </span>
+                    <span className="font-medium">{bug.title}</span>
+                  </div>
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-muted/40 p-2 rounded">
+                    {bug.stack}
+                  </pre>
+                  {autoFix && (
+                    <div className="border-t pt-3 space-y-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="px-2 py-0.5 rounded bg-green-500/10 text-green-600 font-medium">
+                          PR #{autoFix.pr}
+                        </span>
+                        {reviewApproved && (
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600">
+                            리뷰 승인됨
+                          </span>
+                        )}
+                      </div>
+                      <pre className="text-xs font-mono bg-muted/40 p-2 rounded whitespace-pre-wrap">
+                        {autoFix.diff}
+                      </pre>
                     </div>
-                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
-                      {r.text}
-                    </pre>
+                  )}
+                </div>
+              ) : (
+                <Empty>버그 리포트 수신 대기 중.</Empty>
+              )}
+            </Panel>
+          )}
+
+          {hasQaFlow && (
+            <Panel title="QA 실행" icon={<FlaskConical size={16} />} ready={testRuns.length > 0} highlight={runner.currentStep?.callout?.target === 'qa'}>
+              <div className="space-y-3">
+                {testRuns.map((r, i) => (
+                  <div key={i} className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-medium">{r.platform}</span>
+                      <span className="text-muted-foreground">
+                        {r.passed} / {r.total}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500"
+                        style={{ width: `${(r.passed / r.total) * 100}%` }}
+                      />
+                    </div>
                   </div>
                 ))}
+                {testReport && (
+                  <div className="border-t pt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <div className="text-xs text-muted-foreground">전체 커버리지</div>
+                      <div className="font-bold text-lg">{testReport.coverage}%</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">신규 요구사항</div>
+                      <div className="font-bold text-lg text-primary">
+                        {testReport.newCoverage}%
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </Panel>
-
-          <Panel
-            title="설계 — 아키텍처 다이어그램"
-            icon={<GitBranch size={16} />}
-            ready={!!design}
-          >
-            {design ? (
-              <div className="bg-white rounded-md p-4 border">
-                <MermaidViewer code={design.mermaid} />
-              </div>
-            ) : (
-              <Empty>요구사항이 수집되면 자동 생성됩니다.</Empty>
-            )}
-          </Panel>
+            </Panel>
+          )}
         </div>
 
         <aside className="col-span-4 space-y-4">
@@ -106,7 +213,7 @@ export function DemoPlayer({ scenario }: { scenario: DemoScenario }) {
             <CurrentStep step={runner.currentStep} />
           </Panel>
 
-          <Panel title="에이전트 활동" icon={<Activity size={16} />} ready={!!dispatched}>
+          <Panel title="에이전트 활동" icon={<Activity size={16} />} ready={!!dispatched} highlight={runner.currentStep?.callout?.target === 'agent'}>
             <div className="space-y-2 text-sm">
               {dispatched && (
                 <LogLine icon={<Send size={12} />} tone="blue">
@@ -255,15 +362,21 @@ function Panel({
   title,
   icon,
   ready,
+  highlight,
   children,
 }: {
   title: string
   icon?: React.ReactNode
   ready?: boolean
+  highlight?: boolean
   children: React.ReactNode
 }) {
   return (
-    <section className="border rounded-lg bg-card">
+    <section
+      className={`border rounded-lg bg-card transition-all ${
+        highlight ? 'ring-2 ring-primary shadow-lg' : ''
+      }`}
+    >
       <header className="flex items-center gap-2 px-4 py-2.5 border-b text-sm font-medium">
         {icon}
         <span>{title}</span>
@@ -275,6 +388,38 @@ function Panel({
       </header>
       <div className="p-4">{children}</div>
     </section>
+  )
+}
+
+function CalloutOverlay({ step }: { step: DemoStep | null }) {
+  const [dismissed, setDismissed] = useState<string | null>(null)
+
+  useEffect(() => {
+    setDismissed(null)
+  }, [step?.callout?.message])
+
+  if (!step?.callout) return null
+  const key = `${step.at}-${step.callout.message}`
+  if (dismissed === key) return null
+
+  return (
+    <div className="fixed bottom-6 right-6 max-w-sm z-50 animate-in slide-in-from-bottom-4">
+      <div className="bg-primary text-primary-foreground rounded-lg shadow-xl p-4 flex items-start gap-3">
+        <Lightbulb size={18} className="shrink-0 mt-0.5" />
+        <div className="flex-1 text-sm">
+          <div className="font-medium mb-1">{step.title}</div>
+          <div className="opacity-90 text-xs leading-relaxed">
+            {step.callout.message}
+          </div>
+        </div>
+        <button
+          onClick={() => setDismissed(key)}
+          className="shrink-0 opacity-70 hover:opacity-100"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    </div>
   )
 }
 
