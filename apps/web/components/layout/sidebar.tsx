@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Settings,
   Building2,
+  PlayCircle,
 } from 'lucide-react'
 
 const nav = [
@@ -18,6 +19,7 @@ const nav = [
   { href: '/crm', label: 'CRM', icon: Building2 },
   { href: '/agents', label: 'Agents', icon: Bot },
   { href: '/feedback', label: 'Feedback', icon: MessageSquare },
+  { href: '/demo', label: 'Demo Tour', icon: PlayCircle },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

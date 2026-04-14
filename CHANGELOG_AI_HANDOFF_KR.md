@@ -11,6 +11,33 @@
 
 ---
 
+## [0.9.0-a] — 2026-04-14
+
+### Phase 8-A — Demo Tour (샌드박스 + 시나리오 1)
+
+#### 추가
+- **데모 시나리오 엔진** (`apps/web/lib/demo/`)
+  - `scenarios.ts` — 타임라인 기반 시나리오 정의 (`DemoStep`,
+    `DemoScenario`). 첫 시나리오 "프로젝트 킥오프" 포함 — 프로젝트 생성
+    → 요구사항 3건 입력 → 아키텍처 자동 생성 → Mac 에이전트 디스패치
+    → 태스크 완료까지 22초 재생.
+  - `use-demo-runner.ts` — `requestAnimationFrame` 기반 재생 엔진.
+    play/pause/reset/seek/speed(0.5x–4x) 지원.
+
+- **Demo Tour UI** (`apps/web/app/(admin)/demo/` + `components/demo/`)
+  - `/demo` — 시나리오 목록 페이지.
+  - `/demo/[id]` — 시나리오 플레이어. 진행률 바, 타임라인 사이드바,
+    현재 단계 설명, 프로젝트/요구사항/설계 패널, 에이전트 활동 로그.
+  - 설계 단계에서 기존 `MermaidViewer`로 Mermaid 다이어그램 실제 렌더.
+  - 사이드바에 "Demo Tour" 항목 추가.
+
+#### 참고
+- 로그인 사용자용 학습 경로. 실제 API/DB에 쓰지 않는 **프론트엔드 전용
+  시뮬레이션** (Phase 8-A 범위). Mock 에이전트 응답과 비로그인 `/demo`
+  공개 경로는 Phase 8-C에서 추가 예정.
+
+---
+
 ## [0.8.0] — 2026-04-13
 
 ### Phase 7 — Agent Client 구현 (agent-base + mac-agent)
