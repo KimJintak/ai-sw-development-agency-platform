@@ -1,9 +1,8 @@
-import { NestFactory, Reflector } from '@nestjs/core'
+import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters/http-exception.filter'
-import { RolesGuard } from './common/guards/roles.guard'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
@@ -11,10 +10,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api')
 
   app.enableCors({
-    origin: [
-      process.env.NEXTAUTH_URL ?? 'http://localhost:3000',
-      process.env.PORTAL_NEXTAUTH_URL ?? 'http://localhost:3001',
-    ],
+    origin: true,
     credentials: true,
   })
 
@@ -23,9 +19,6 @@ async function bootstrap() {
   )
 
   app.useGlobalFilters(new AllExceptionsFilter(), new HttpExceptionFilter())
-
-  const reflector = app.get(Reflector)
-  app.useGlobalGuards(new RolesGuard(reflector))
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('AI Agency Platform API')

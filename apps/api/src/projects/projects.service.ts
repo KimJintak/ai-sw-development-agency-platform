@@ -53,7 +53,7 @@ export class ProjectsService {
 
   async updateOrchestrationDsl(id: string, dto: UpdateOrchestrationDslDto) {
     await this.findOne(id)
-    return this.prisma.project.update({ where: { id }, data: { orchestrationDsl: dto.dsl } })
+    return this.prisma.project.update({ where: { id }, data: { orchestrationDsl: dto.dsl as any } })
   }
 
   async remove(id: string) {

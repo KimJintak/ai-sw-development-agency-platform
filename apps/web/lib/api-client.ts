@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
+  baseURL: typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'),
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -21,7 +21,7 @@ apiClient.interceptors.response.use(
       if (refreshToken) {
         try {
           const { data } = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/auth/refresh`,
+            '/api/auth/refresh',
             { refreshToken },
           )
           localStorage.setItem('accessToken', data.accessToken)

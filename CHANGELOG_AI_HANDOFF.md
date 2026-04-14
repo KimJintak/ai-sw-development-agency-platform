@@ -11,6 +11,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] — 2026-04-13
+
+### Phase 7 — Agent Client Implementation (agent-base + mac-agent)
+
+#### Added
+- **`agent-base`** (`agents/base/src/`)
+  - `AgentClient` — Phoenix Orchestrator WebSocket client implementing
+    Phoenix Channel wire protocol. Auto channel join, heartbeat
+    (Phoenix + channel level), `task:dispatch` receive, `task:update`
+    / `task:complete` send. Auto-reconnect (5s interval), graceful
+    shutdown on SIGINT/SIGTERM.
+  - `TaskHandler` type — async function interface for agent-specific
+    task processing. `TaskPayload` → `TaskResult`.
+
+- **`mac-agent`** (`agents/mac-agent/src/`)
+  - **WebSocket mode** (`npm run dev`) — connects to Orchestrator,
+    registers as `MAC_DEV`, receives and processes tasks automatically.
+  - **Standalone mode** (`npm run dev:standalone`) — polls API directly
+    for `SUBMITTED` MAC_DEV tasks without Orchestrator. JWT login +
+    periodic polling (default 10s).
+  - `task-handler.ts` — Claude API task handler:
+    - `code_generation` / `code_review` / `bug_fix` — code gen/review
+    - `test_generation` — XCTest test case auto-generation
+    - `build` — build simulation (actual xcodebuild integration pending)
+  - **Dry-run mode** when no ANTHROPIC_API_KEY set (prompt preview).
+
+#### Changed
+- **`apps/web/lib/api-client.ts`** — browser uses relative paths via
+  Next.js rewrites proxy for external access (devtunnels, etc.).
+- **`apps/web/postcss.config.js`** added — enables Tailwind CSS compilation.
+- **`apps/web/app/page.tsx`** added — root path → `/login` redirect.
+- **`apps/web/app/(admin)/projects/page.tsx`** — "New Project" button
+  now opens creation form (customer select, name, platforms toggle).
+- **`apps/api/src/main.ts`** — removed global `RolesGuard` (was causing
+  403 before JWT auth ran). CORS set to `origin: true`.
+- **Build fixes** — type casting in `auth.service.ts`, `jwt.strategy.ts`,
+  `projects.service.ts`.
+- **`apps/web/package.json`** — removed non-existent `@radix-ui/react-badge`.
+
+#### Known Limitations
+- Orchestrator (Elixir) not available in this environment — WebSocket
+  mode requires Elixir. Standalone mode works with API directly.
+- Actual xcodebuild / Flutter build integration not implemented —
+  `build` task type runs simulation only.
+
+---
+
 ## [0.7.0] — 2026-04-10
 
 ### Phase 6 — QA & Test Management (FR-07)

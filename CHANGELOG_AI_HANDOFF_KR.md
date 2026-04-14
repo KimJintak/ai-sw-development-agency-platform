@@ -11,6 +11,59 @@
 
 ---
 
+## [0.8.0] — 2026-04-13
+
+### Phase 7 — Agent Client 구현 (agent-base + mac-agent)
+
+#### 추가
+- **`agent-base`** (`agents/base/src/`)
+  - `AgentClient` — Phoenix Orchestrator WebSocket 클라이언트.
+    Phoenix Channel wire protocol (`[joinRef, ref, topic, event, payload]`)
+    구현. 자동 채널 join, heartbeat 전송 (Phoenix + channel 레벨),
+    `task:dispatch` 이벤트 수신 및 `task:update`/`task:complete` 전송.
+  - 자동 재연결 (5초 간격). graceful shutdown (`SIGINT`/`SIGTERM`).
+  - `TaskHandler` 타입 — 에이전트별로 태스크 처리 로직을 구현하는
+    async 함수 인터페이스. `TaskPayload` → `TaskResult` 반환.
+  - `TaskPayload` / `TaskResult` 타입 정의.
+
+- **`mac-agent`** (`agents/mac-agent/src/`)
+  - **WebSocket 모드** (`npm run dev`) — Orchestrator에 WebSocket 연결,
+    `MAC_DEV` 타입으로 등록, 태스크 자동 수신/처리.
+  - **Standalone 모드** (`npm run dev:standalone`) — Orchestrator 없이
+    API를 직접 폴링하여 `SUBMITTED` 상태의 `MAC_DEV` 태스크를 처리.
+    JWT 로그인 → 주기적 폴링 (기본 10초).
+  - `task-handler.ts` — Claude API 연동 태스크 핸들러:
+    - `code_generation` / `code_review` / `bug_fix` — 코드 생성/리뷰
+    - `test_generation` — XCTest 테스트 케이스 자동 생성
+    - `build` — 빌드 시뮬레이션 (실제 xcodebuild 연동은 후속)
+  - Claude API 키 미설정 시 **dry-run 모드**로 동작 (프롬프트 미리보기).
+  - System prompt: Swift/SwiftUI/UIKit/Flutter 전문 macOS/iOS 개발자.
+
+#### 변경
+- **`apps/web/lib/api-client.ts`** — 브라우저에서 상대 경로(`''`) 사용,
+  Next.js rewrites 프록시를 통해 API 호출. devtunnels 등 외부 접속 지원.
+- **`apps/web/postcss.config.js`** 추가 — Tailwind CSS 컴파일 활성화.
+- **`apps/web/app/page.tsx`** 추가 — 루트 경로 → `/login` 리다이렉트.
+- **`apps/web/app/(admin)/projects/page.tsx`** — "New Project" 버튼에
+  생성 폼 추가 (고객 선택, 이름, 설명, 플랫폼 토글, GitHub repo).
+- **`apps/api/src/main.ts`** — 글로벌 `RolesGuard` 제거 (JWT 인증 전에
+  role 검증되어 403 발생하던 버그 수정). CORS `origin: true`로 변경
+  (devtunnels 등 외부 도메인 지원).
+- **빌드 수정** — `auth.service.ts`, `jwt.strategy.ts`,
+  `projects.service.ts`의 타입 캐스팅 이슈 수정.
+- **`apps/web/package.json`** — 존재하지 않는 `@radix-ui/react-badge`
+  의존성 제거.
+
+#### 알려진 제약사항
+- Orchestrator (Elixir)가 이 환경에서 실행 불가 — WebSocket 모드
+  테스트는 Elixir 환경 필요. Standalone 모드로 API 직접 연동 가능.
+- 실제 xcodebuild / Flutter 빌드 연동 미구현 — `build` 태스크는
+  시뮬레이션만 수행.
+- Standalone 모드의 태스크 상태 업데이트는 현재 API의 기존
+  엔드포인트 구조에 맞추어야 하며, 일부 경로 조정 필요 가능.
+
+---
+
 ## [0.7.0] — 2026-04-10
 
 ### Phase 6 — QA & 테스트 관리 (FR-07)
