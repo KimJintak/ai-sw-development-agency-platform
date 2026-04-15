@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ChatAuthorType, ChatMessageKind, Prisma } from '@prisma/client'
 
@@ -35,6 +35,29 @@ export class ChatService {
       orderBy: { createdAt: 'desc' },
       take: limit,
     })
+  }
+
+  postSystem(
+    projectId: string,
+    input: { body: string; kind?: ChatMessageKind; metadata?: Record<string, unknown> },
+  ) {
+    return this.create(
+      projectId,
+      { id: 'system', name: 'System', type: ChatAuthorType.SYSTEM },
+      input,
+    )
+  }
+
+  postAgent(
+    projectId: string,
+    agent: { id: string; name: string },
+    input: { body: string; kind?: ChatMessageKind; metadata?: Record<string, unknown> },
+  ) {
+    return this.create(
+      projectId,
+      { id: agent.id, name: agent.name, type: ChatAuthorType.AGENT },
+      input,
+    )
   }
 
   create(

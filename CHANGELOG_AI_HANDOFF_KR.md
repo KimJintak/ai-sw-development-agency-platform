@@ -11,6 +11,34 @@
 
 ---
 
+## [0.10.0-c] — 2026-04-15
+
+### Phase 9-C — 슬래시 명령 + 에이전트 이벤트 자동 포스트
+
+#### 추가
+- **`/task` 슬래시 명령 파서** (`apps/api/src/chat/slash-commands.ts`)
+  - 문법: `/task @AGENT_TYPE task_type [REF-ID]`
+    (예: `/task @MAC_DEV code_generation REQ-001`)
+  - ChatController가 `COMMAND` kind 메시지를 감지해 파싱 →
+    `AgentsService.createTask()` 호출 → SYSTEM 봇 메시지로 결과 에코
+    (성공/실패 모두). 파싱 실패 시 사용법 안내.
+  - AgentType 화이트리스트 검증.
+
+- **에이전트 이벤트 자동 포스트 (봇)**
+  - `AgentsService.applyUpdate` → `task:update` 가 들어올 때마다
+    프로젝트 채팅방에 `AGENT_UPDATE` 메시지로 진행률/메시지 포스트.
+  - `AgentsService.markComplete` → 성공 시 `태스크 완료 ✓`,
+    실패 시 `태스크 실패 ✗` 를 `STATUS` 메시지로 포스트.
+  - 포스트는 socket.io 로 실시간 브로드캐스트 (`broadcastMessage`).
+  - 채팅 포스트 실패는 로그만 남기고 에이전트 파이프라인을 막지 않음
+    (taskId를 `metadata.taskId` 에 저장해 추후 연계 가능).
+
+- **순환 의존성 해결** — `ChatModule ↔ AgentsModule` 을 `forwardRef`
+  로 양방향 import. ChatGateway 는 이제 Chat 이 아닌 다른 모듈에서도
+  broadcast 용도로 사용 가능.
+
+---
+
 ## [0.10.0-b] — 2026-04-15
 
 ### Phase 9-B — 채팅 실시간 (socket.io Gateway)

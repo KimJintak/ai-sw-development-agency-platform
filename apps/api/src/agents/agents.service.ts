@@ -1,11 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
-import { AgentTaskStatus, AgentType, Prisma } from '@prisma/client'
+import { Inject, Injectable, Logger, NotFoundException, forwardRef } from '@nestjs/common'
+import { AgentTaskStatus, AgentType, ChatMessageKind, Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { RedisService } from '../common/redis/redis.service'
 import { CreateAgentTaskDto } from './dto/create-agent-task.dto'
 import { ListAgentTasksQuery } from './dto/list-agent-tasks.query'
 import { TaskUpdateDto } from './dto/task-update.dto'
 import { TaskCompleteDto } from './dto/task-complete.dto'
+import { ChatService } from '../chat/chat.service'
+import { ChatGateway } from '../chat/chat.gateway'
 
 @Injectable()
 export class AgentsService {
@@ -14,7 +16,32 @@ export class AgentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    @Inject(forwardRef(() => ChatService))
+    private readonly chat: ChatService,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
   ) {}
+
+  private async postChatStatus(taskId: string, body: string, kind: ChatMessageKind) {
+    try {
+      const task = await this.prisma.agentTask.findUnique({
+        where: { id: taskId },
+        select: {
+          projectId: true,
+          agentCard: { select: { id: true, name: true, agentType: true } },
+        },
+      })
+      if (!task?.projectId || !task.agentCard) return
+      const msg = await this.chat.postAgent(
+        task.projectId,
+        { id: task.agentCard.id, name: `${task.agentCard.agentType} 에이전트` },
+        { body, kind, metadata: { taskId } },
+      )
+      this.chatGateway.broadcastMessage(task.projectId, msg)
+    } catch (err) {
+      this.logger.warn(`chat bot post failed for task ${taskId}: ${(err as Error).message}`)
+    }
+  }
 
   listCards() {
     return this.prisma.agentCard.findMany({
@@ -137,13 +164,24 @@ export class AgentsService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     )
+    .then(async (updated) => {
+      if (dto.message || dto.progress !== undefined) {
+        const pct = dto.progress !== undefined ? ` (${Math.round(dto.progress * 100)}%)` : ''
+        await this.postChatStatus(
+          id,
+          `${dto.message ?? '진행 중...'}${pct}`,
+          ChatMessageKind.AGENT_UPDATE,
+        )
+      }
+      return updated
+    })
   }
 
   async markComplete(id: string, dto: TaskCompleteDto) {
     await this.findTask(id)
 
     const success = dto.success ?? true
-    return this.prisma.agentTask.update({
+    const updated = await this.prisma.agentTask.update({
       where: { id },
       data: {
         status: success ? AgentTaskStatus.COMPLETED : AgentTaskStatus.FAILED,
@@ -152,5 +190,15 @@ export class AgentsService {
         completedAt: new Date(),
       },
     })
+
+    await this.postChatStatus(
+      id,
+      success
+        ? `태스크 완료 ✓${dto.errorLog ? ` — ${dto.errorLog}` : ''}`
+        : `태스크 실패 ✗${dto.errorLog ? ` — ${dto.errorLog}` : ''}`,
+      ChatMessageKind.STATUS,
+    )
+
+    return updated
   }
 }
