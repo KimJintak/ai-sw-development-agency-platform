@@ -131,6 +131,11 @@ export const projectKickoffScenario: DemoScenario = {
       kind: 'agentUpdate',
       title: '에이전트 진행 보고',
       detail: 'task:update — "LoginView.swift 생성 중..."',
+      data: {
+        generatedCode:
+          'import SwiftUI\n\nstruct LoginView: View {\n  @StateObject private var vm = LoginViewModel()\n\n  var body: some View {\n    VStack(spacing: 16) {\n      TextField("이메일", text: $vm.email)\n      SecureField("비밀번호", text: $vm.password)\n      Button("로그인") { Task { await vm.submit() } }\n        .disabled(!vm.canSubmit)\n    }\n    .padding()\n  }\n}',
+        file: 'LoginView.swift',
+      },
     },
     {
       at: 20_500,

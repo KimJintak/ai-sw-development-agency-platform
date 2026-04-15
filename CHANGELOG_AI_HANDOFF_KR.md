@@ -11,6 +11,27 @@
 
 ---
 
+## [0.9.0-c] — 2026-04-14
+
+### Phase 8-C — Demo 공개 경로 + Mock 에이전트 응답
+
+#### 추가
+- **비로그인 `/demo` 경로** — `app/(admin)/demo` 를 `app/(demo)/demo`
+  route group으로 이동. 새 `DemoShell` 이 클라이언트에서
+  `localStorage.accessToken` 유무를 확인:
+  - 로그인된 사용자는 기존 admin 사이드바 레이아웃 그대로.
+  - 비로그인 방문자는 상단 로고/로그인 버튼 + 하단 "시뮬레이션" 푸터의
+    경량 레이아웃으로 표시.
+- **에이전트 생성 코드 패널** — `agentUpdate` 스텝에 pre-baked
+  SwiftUI `LoginView` 코드를 첨부하여, 실제 Claude API 호출 없이
+  에이전트가 생성한 결과물을 그대로 보여줌(Mock 응답).
+
+#### 변경
+- 로그인 페이지의 "로그인" 진입 전에도 `/demo` 에서 전체 플로우를
+  체험 가능.
+
+---
+
 ## [0.9.0-b] — 2026-04-14
 
 ### Phase 8-B — Demo Tour 가이드 오버레이 + 시나리오 확장

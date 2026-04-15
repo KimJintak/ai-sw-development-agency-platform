@@ -18,6 +18,7 @@ import {
   FlaskConical,
   Lightbulb,
   X,
+  Code2,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -35,6 +36,9 @@ export function DemoPlayer({ scenario }: { scenario: DemoScenario }) {
     | undefined
   const dispatched = runner.activeSteps.find((s) => s.kind === 'dispatchTask')
   const agentUpdate = runner.activeSteps.find((s) => s.kind === 'agentUpdate')
+  const generatedCode = runner.activeSteps
+    .map((s) => s.data as { generatedCode?: string; file?: string } | undefined)
+    .find((d) => d?.generatedCode)
   const completed = runner.activeSteps.find((s) => s.kind === 'taskComplete')
   const bug = runner.activeSteps.find((s) => s.kind === 'bugReport')?.data as
     | { id: string; severity: string; title: string; stack: string }
@@ -128,6 +132,18 @@ export function DemoPlayer({ scenario }: { scenario: DemoScenario }) {
                 )}
               </Panel>
             </>
+          )}
+
+          {generatedCode && (
+            <Panel
+              title={`에이전트 생성 코드 — ${generatedCode.file}`}
+              icon={<Code2 size={16} />}
+              ready
+            >
+              <pre className="text-xs font-mono bg-slate-900 text-slate-100 p-3 rounded overflow-x-auto">
+                {generatedCode.generatedCode}
+              </pre>
+            </Panel>
           )}
 
           {hasBugFlow && (
