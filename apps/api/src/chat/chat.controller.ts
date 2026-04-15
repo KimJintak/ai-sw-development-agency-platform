@@ -10,6 +10,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { ChatAuthorType } from '@prisma/client'
 import { ChatService } from './chat.service'
+import { ChatGateway } from './chat.gateway'
 import { CreateChatMessageDto, MarkReadDto } from './dto/chat.dto'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
@@ -25,7 +26,10 @@ interface AuthUser {
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class ChatController {
-  constructor(private readonly service: ChatService) {}
+  constructor(
+    private readonly service: ChatService,
+    private readonly gateway: ChatGateway,
+  ) {}
 
   @Get('chat/inbox')
   @ApiOperation({ summary: '통합 인박스 — 내가 속한 모든 프로젝트의 미읽음/최근 메시지' })
@@ -56,11 +60,13 @@ export class ChatController {
     @CurrentUser() user: AuthUser,
   ) {
     await this.service.assertProjectAccess(projectId, user.id)
-    return this.service.create(
+    const message = await this.service.create(
       projectId,
       { id: user.id, name: user.name ?? user.email, type: ChatAuthorType.USER },
       dto,
     )
+    this.gateway.broadcastMessage(projectId, message)
+    return message
   }
 
   @Post('projects/:projectId/chat/read')

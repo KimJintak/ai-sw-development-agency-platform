@@ -11,6 +11,40 @@
 
 ---
 
+## [0.10.0-b] — 2026-04-15
+
+### Phase 9-B — 채팅 실시간 (socket.io Gateway)
+
+#### 추가
+- **`ChatGateway`** (`apps/api/src/chat/chat.gateway.ts`) —
+  NestJS `@nestjs/websockets` + socket.io 네임스페이스 `/chat`.
+  - 연결 시 `handshake.auth.token` 의 JWT를 검증하여
+    `{ userId, email, name }` 을 `socket.data` 에 기록.
+  - `room:join { projectId }` — `assertProjectAccess` 통과 시
+    `project:<id>` 방에 join.
+  - `room:leave { projectId }`.
+  - `broadcastMessage(projectId, message)` — 해당 방에 `chat:message`
+    이벤트로 메시지 푸시.
+
+- **Controller 연동** — `POST /projects/:id/chat` 이 DB 저장 후
+  즉시 `gateway.broadcastMessage()` 호출.
+
+- **웹 클라이언트**
+  - `ChatRoom` 이 `socket.io-client` 로 `/chat` 네임스페이스에 연결
+    (auth 로 localStorage accessToken 전송). `chat:message` 이벤트로
+    실시간 수신, 5초 폴링 제거.
+  - 헤더에 `live` / `offline` 연결 상태 배지(Wifi 아이콘).
+  - 내가 보낸 메시지는 POST 응답으로 즉시 반영(optimistic 유지).
+
+- **Next.js rewrite** — `/socket.io/*` 요청을 API 로 프록시 추가
+  (devtunnels·프로덕션 양쪽에서 동일한 오리진 사용).
+
+#### 참고
+- Phoenix Orchestrator 는 여전히 에이전트 전용으로 유지. 브라우저
+  실시간은 NestJS 쪽에서 처리하여 JWT 정책 통합.
+
+---
+
 ## [0.10.0-a] — 2026-04-15
 
 ### Phase 9-A — 프로젝트 채팅 (REST + 통합 인박스)
