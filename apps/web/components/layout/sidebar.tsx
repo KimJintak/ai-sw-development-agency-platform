@@ -11,11 +11,13 @@ import {
   Settings,
   Building2,
   PlayCircle,
+  Inbox,
 } from 'lucide-react'
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
+  { href: '/messages', label: 'Messages', icon: Inbox },
   { href: '/crm', label: 'CRM', icon: Building2 },
   { href: '/agents', label: 'Agents', icon: Bot },
   { href: '/feedback', label: 'Feedback', icon: MessageSquare },

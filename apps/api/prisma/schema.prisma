@@ -149,6 +149,8 @@ model Project {
   designArtifacts DesignArtifact[]
   agentTasks      AgentTask[]
   feedback        Feedback[]
+  chatMessages    ChatMessage[]
+  chatReads       ChatReadState[]
 
   @@map("projects")
 }
@@ -612,4 +614,51 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   DUPLICATE
+}
+
+// ─────────────────────────────────────────────
+// CHAT (FR-09 Phase 9-A)
+// ─────────────────────────────────────────────
+
+model ChatMessage {
+  id         String          @id @default(cuid())
+  projectId  String          @map("project_id")
+  authorType ChatAuthorType  @map("author_type")
+  authorId   String          @map("author_id")
+  authorName String          @map("author_name")
+  kind       ChatMessageKind @default(TEXT)
+  body       String
+  metadata   Json?
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@map("chat_messages")
+}
+
+model ChatReadState {
+  id         String   @id @default(cuid())
+  projectId  String   @map("project_id")
+  userId     String   @map("user_id")
+  lastReadAt DateTime @map("last_read_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("chat_read_states")
+}
+
+enum ChatAuthorType {
+  USER
+  AGENT
+  SYSTEM
+}
+
+enum ChatMessageKind {
+  TEXT
+  STATUS
+  COMMAND
+  AGENT_UPDATE
 }

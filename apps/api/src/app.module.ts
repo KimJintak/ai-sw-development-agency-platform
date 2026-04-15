@@ -11,6 +11,7 @@ import { AgentsModule } from './agents/agents.module'
 import { RequirementsModule } from './requirements/requirements.module'
 import { DesignModule } from './design/design.module'
 import { QaModule } from './qa/qa.module'
+import { ChatModule } from './chat/chat.module'
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { QaModule } from './qa/qa.module'
     RequirementsModule,
     DesignModule,
     QaModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

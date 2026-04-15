@@ -11,6 +11,40 @@
 
 ---
 
+## [0.10.0-a] — 2026-04-15
+
+### Phase 9-A — 프로젝트 채팅 (REST + 통합 인박스)
+
+#### 추가
+- **DB 모델**
+  - `ChatMessage` — `projectId`, `authorType`(USER/AGENT/SYSTEM), `kind`
+    (TEXT/STATUS/COMMAND/AGENT_UPDATE), `body`, `metadata`.
+    `@@index([projectId, createdAt])` 로 방별 최신순 조회 최적화.
+  - `ChatReadState` — 사용자별 방별 마지막 읽음 시각. 미읽음 수 계산용.
+  - `Project` 관계에 `chatMessages`/`chatReads` 추가.
+
+- **NestJS Chat 모듈** (`apps/api/src/chat/`)
+  - `GET /api/projects/:id/chat` — 페이지네이션(`limit`, `before` 커서),
+    최대 200건.
+  - `POST /api/projects/:id/chat` — 메시지 전송. `/` 로 시작하면
+    `COMMAND` kind로 저장 (Phase 9-C에서 파싱).
+  - `POST /api/projects/:id/chat/read` — 미읽음 커서 업데이트.
+  - `GET /api/chat/inbox` — 내가 속한 모든 프로젝트의 미읽음/최근 메시지
+    집계. `projectMember` 기반 권한 필터링.
+
+- **웹 UI**
+  - `/projects/[id]/chat` — `ChatRoom` 컴포넌트. 5초 폴링(Phase 9-B에서
+    WebSocket으로 교체 예정), 자동 스크롤, Enter 전송 / Shift+Enter 줄바꿈,
+    USER / AGENT / SYSTEM 구분 렌더, COMMAND 메시지는 모노스페이스.
+  - `/messages` — 통합 인박스. 10초 폴링으로 미읽음 뱃지·최신 프리뷰 표시.
+  - 사이드바에 "Messages" 항목 추가, 프로젝트 상세 SUB_NAV에 "Chat" 추가.
+
+#### 참고
+- WebSocket 실시간 연동은 Phase 9-B, `/task` 슬래시 명령 파서 +
+  에이전트 이벤트 자동 포스트는 Phase 9-C.
+
+---
+
 ## [0.9.0-c] — 2026-04-14
 
 ### Phase 8-C — Demo 공개 경로 + Mock 에이전트 응답
