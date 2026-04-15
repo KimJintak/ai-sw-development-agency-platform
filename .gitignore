@@ -2,6 +2,12 @@
 node_modules
 .pnpm-store
 
+# npm lockfiles (this repo uses pnpm workspaces; pnpm-lock.yaml is canonical)
+package-lock.json
+
+# Next.js incremental build info
+tsconfig.tsbuildinfo
+
 # build outputs
 dist
 .next
