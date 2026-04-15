@@ -11,6 +11,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.0-c] — 2026-04-14
+
+### Phase 8-C — Public /demo route + mock agent response
+
+#### Added
+- **Public `/demo` route** — moved demo pages from `(admin)` to a new
+  `(demo)` route group. New `DemoShell` reads `localStorage.accessToken`
+  on mount:
+  - Logged-in users get the original admin sidebar layout.
+  - Anonymous visitors see a lightweight header with a login button
+    and a footer banner reading "simulation only".
+- **Mock agent code panel** — scenario #1's `agentUpdate` step now
+  carries a pre-baked SwiftUI `LoginView.swift` snippet. The player
+  renders it as an "Agent-generated code" panel without any real
+  Claude API call.
+
+---
+
+## [0.9.0-b] — 2026-04-14
+
+### Phase 8-B — Demo Tour guidance overlay + more scenarios
+
+#### Added
+- **Scenario #2 — Bug triage → auto-fix** (`bug-triage`): customer bug
+  intake → `bug_fix` dispatch → root-cause analysis → PR creation →
+  review approval → merge. 18 s.
+- **Scenario #3 — Automated QA run** (`qa-run`): `test_generation`
+  dispatch → per-platform (iOS/Android) execution → failure analysis →
+  coverage report (81.3 % overall, 100 % on new requirements).
+- **`CalloutOverlay`** — bottom-right toast showing each step's
+  narration with a lightbulb icon, dismissable and auto-resetting on
+  step change.
+- **Panel highlight** — the panel matching a callout's `target` gets
+  `ring-2 ring-primary`, directing viewer attention.
+
+#### Changed
+- `DemoPlayer` renders project / bug / QA panels conditionally based
+  on which step kinds the active scenario emits.
+
+---
+
+## [0.9.0-a] — 2026-04-14
+
+### Phase 8-A — Demo Tour sandbox + project-kickoff scenario
+
+#### Added
+- **Scenario engine** (`apps/web/lib/demo/`)
+  - `scenarios.ts` — timeline-based `DemoStep` / `DemoScenario` types.
+    First scenario "Project kickoff" (22 s): create project → 3
+    requirements → auto-generated architecture → MAC_DEV dispatch →
+    `task:update` → `task:complete`.
+  - `use-demo-runner.ts` — `requestAnimationFrame`-based playback
+    engine with play / pause / reset / seek / speed (0.5 × – 4 ×).
+- **Demo Tour UI**
+  - `/demo` — scenario index.
+  - `/demo/[id]` — player with progress bar, timeline sidebar, current
+    step card, and live panels for project, requirements, design, and
+    agent activity. The design step renders a real Mermaid diagram via
+    the existing `MermaidViewer`.
+  - Sidebar entry for "Demo Tour".
+
+#### Notes
+- Logged-in learning path; frontend-only simulation (no API/DB writes)
+  within Phase 8-A scope. Public route and mock agent data land in
+  Phase 8-C.
+
+---
+
 ## [0.8.0] — 2026-04-13
 
 ### Phase 7 — Agent Client Implementation (agent-base + mac-agent)
