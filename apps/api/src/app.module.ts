@@ -13,6 +13,7 @@ import { DesignModule } from './design/design.module'
 import { QaModule } from './qa/qa.module'
 import { ChatModule } from './chat/chat.module'
 import { AdminModule } from './admin/admin.module'
+import { ReleasesModule } from './releases/releases.module'
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AdminModule } from './admin/admin.module'
     QaModule,
     ChatModule,
     AdminModule,
+    ReleasesModule,
   ],
 })
 export class AppModule {}

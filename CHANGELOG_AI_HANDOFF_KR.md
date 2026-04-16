@@ -11,6 +11,44 @@
 
 ---
 
+## [0.12.0] — 2026-04-16
+
+### Phase 11 — 빌드 & 배포 관리 (FR-08)
+
+#### 추가
+- **NestJS Releases 모듈** (`apps/api/src/releases/`)
+  - `ReleasesService`: 릴리스 CRUD, Work Item 연결(addWorkItems/
+    removeWorkItem), 상태 전이(DRAFT→TESTING→APPROVED→DEPLOYING→
+    DEPLOYED|ROLLED_BACK), 승인(테스트 검증), 빌드 트리거/업데이트,
+    배포 이력 조회.
+  - `DeployPipelineService`: 배포 파이프라인(테스트 검증 → 전 플랫폼
+    빌드 → S3 키/CloudFront URL 생성 → 상태 완료). 각 단계를 프로젝트
+    채팅에 STATUS 메시지로 포스트. 롤백 지원.
+  - 빌드는 시뮬레이션(향후 DEPLOY 에이전트로 교체). S3/CloudFront
+    URL은 패턴 기반 생성.
+  
+- **REST 엔드포인트**
+  - `GET /api/projects/:id/releases` — 프로젝트 릴리스 목록
+  - `POST /api/projects/:id/releases` — 릴리스 생성
+  - `GET /api/releases/:id` — 릴리스 상세(items, builds, testRuns)
+  - `PATCH /api/releases/:id/status` — 상태 전이
+  - `POST /api/releases/:id/approve` — 승인(테스트 검증)
+  - `POST /api/releases/:id/items` — Work Item 추가
+  - `DELETE /api/releases/:rid/items/:wid` — Work Item 제거
+  - `POST /api/releases/:id/builds` — 빌드 트리거
+  - `PATCH /api/builds/:id` — 빌드 상태 업데이트
+  - `POST /api/releases/:id/deploy` — 배포 파이프라인 실행
+  - `POST /api/releases/:id/rollback` — 롤백
+  - `GET /api/projects/:id/deploy-history` — 배포 이력
+
+- **웹 UI** (`/projects/[id]/releases`)
+  - 좌측: 릴리스 목록(상태 뱃지, 아이템/빌드 카운트) + 새 릴리스 생성 폼
+  - 우측: 상세 — 상태 전이 버튼(테스트 시작/승인/배포/롤백),
+    Work Items 목록, 빌드 목록(상태 아이콘 + CloudFront 다운로드 링크),
+    빌드 로그 프리뷰.
+
+---
+
 ## [0.11.0-c] — 2026-04-16
 
 ### Phase 10-C — 키워드 와치리스트
