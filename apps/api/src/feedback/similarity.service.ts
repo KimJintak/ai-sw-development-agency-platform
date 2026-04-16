@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
-interface SimilarFeedback {
+export interface SimilarFeedback {
   id: string
   title: string
   body: string
