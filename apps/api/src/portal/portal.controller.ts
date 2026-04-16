@@ -4,12 +4,15 @@ import {
   Get,
   Param,
   Post,
+  Res,
   UseGuards,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Response } from 'express'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { PortalService } from './portal.service'
+import { ReportPdfService, type ReportData } from './report-pdf.service'
 import { FeedbackService } from '../feedback/feedback.service'
 
 interface PortalUser {
@@ -26,6 +29,7 @@ export class PortalController {
   constructor(
     private readonly service: PortalService,
     private readonly feedback: FeedbackService,
+    private readonly pdf: ReportPdfService,
   ) {}
 
   @Get('projects')
@@ -75,8 +79,25 @@ export class PortalController {
   }
 
   @Get('projects/:id/report')
-  @ApiOperation({ summary: '납품 보고서 (진척 요약, 요구사항, 릴리스, 테스트, 빌드)' })
+  @ApiOperation({ summary: '납품 보고서 (JSON)' })
   report(@CurrentUser() user: PortalUser, @Param('id') id: string) {
     return this.service.deliveryReport(user.customerId, id)
+  }
+
+  @Get('projects/:id/report/pdf')
+  @ApiOperation({ summary: '납품 보고서 (PDF 다운로드)' })
+  async reportPdf(
+    @CurrentUser() user: PortalUser,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const data = (await this.service.deliveryReport(user.customerId, id)) as unknown as ReportData
+    const buffer = await this.pdf.generate(data)
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="report-${id}.pdf"`,
+      'Content-Length': buffer.length,
+    })
+    res.end(buffer)
   }
 }

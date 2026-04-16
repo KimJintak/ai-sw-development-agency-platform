@@ -129,7 +129,7 @@ export class FeedbackService {
           type: fb.type === FeedbackType.BUG ? 'TASK' : 'STORY',
           status: WorkItemStatus.BACKLOG,
           priority: fb.severity ?? 'P2',
-          platforms: [],
+          platform: null,
         },
       })
       await this.prisma.feedback.update({

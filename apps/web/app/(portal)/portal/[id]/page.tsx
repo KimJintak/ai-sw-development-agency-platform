@@ -222,13 +222,20 @@ export default function PortalProjectPage({ params }: { params: Promise<{ id: st
           <p className="text-sm text-muted-foreground mb-4">
             프로젝트 진척 요약, 요구사항, 릴리스, 테스트 결과, 빌드 목록이 포함된 보고서를 생성합니다.
           </p>
-          <button
-            onClick={downloadReport}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium"
-          >
-            보고서 다운로드 (JSON)
-          </button>
-          <p className="text-xs text-muted-foreground mt-2">PDF 형식은 후속 업데이트에서 지원 예정</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={downloadReport}
+              className="px-4 py-2 border rounded-md text-sm font-medium hover:bg-muted"
+            >
+              JSON 다운로드
+            </button>
+            <a
+              href={`/api/portal/projects/${id}/report/pdf`}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium inline-flex items-center gap-1"
+            >
+              <Download size={14} /> PDF 다운로드
+            </a>
+          </div>
         </div>
       )}
     </div>

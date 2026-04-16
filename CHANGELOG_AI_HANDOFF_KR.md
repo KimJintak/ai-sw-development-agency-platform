@@ -11,6 +11,32 @@
 
 ---
 
+## [0.15.0] — 2026-04-16
+
+### Phase 14 — 납품 보고서 PDF (FR-09-04)
+
+#### 추가
+- **`ReportPdfService`** (`apps/api/src/portal/report-pdf.service.ts`)
+  - `pdfkit` 라이브러리 사용. A4 문서에 5개 섹션:
+    1. 헤더 (프로젝트 이름, 플랫폼, 생성 일시)
+    2. Summary (진척률, Work Items, 요구사항, 릴리스, 빌드 통계)
+    3. Requirements (버전 · 상태별 목록)
+    4. Releases (버전 · 상태 · 배포일 · 빌드 수)
+    5. Test Runs (상태 · 일시)
+    6. Footer (레포트 ID)
+
+- **`GET /api/portal/projects/:id/report/pdf`** — `Content-Type:
+  application/pdf` + `Content-Disposition: attachment` 로 PDF 바이너리
+  직접 반환. JSON 보고서 엔드포인트는 그대로 유지.
+
+- **포털 웹 UI** — 납품 보고서 탭에 JSON + PDF 다운로드 버튼 병렬 배치.
+
+#### 수정
+- `FeedbackService.autoCreateWorkItem` — `platform` 필드를 `null`로
+  수정 (Prisma 스키마와 타입 일치).
+
+---
+
 ## [0.14.0] — 2026-04-16
 
 ### Phase 13 — 배포 후 피드백 루프 (FR-10)
