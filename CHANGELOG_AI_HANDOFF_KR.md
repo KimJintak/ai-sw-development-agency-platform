@@ -11,6 +11,40 @@
 
 ---
 
+## [0.14.0] — 2026-04-16
+
+### Phase 13 — 배포 후 피드백 루프 (FR-10)
+
+#### 추가
+- **NestJS Feedback 모듈** (`apps/api/src/feedback/`)
+  - `FeedbackService`:
+    - `create()` — 피드백 저장 후 즉시 자동 분류(triage).
+    - `triage()` — 키워드 기반 type 분류(BUG/FEATURE/IMPROVEMENT/
+      QUESTION) + severity 분류(P0~P3). Sentry 소스는 자동 P0.
+    - P0/P1 자동 Work Item 생성 → 피드백에 `workItemId` 연결.
+    - `updateStatus()`, `retriage()`, `listByCustomer()`.
+  - `FeedbackController`:
+    - `GET /api/projects/:id/feedback` — 목록 (상태 필터).
+    - `GET /api/feedback/:id` — 상세 (WorkItem 연결 포함).
+    - `POST /api/projects/:id/feedback` — 제출 + 자동 분류 +
+      채팅방에 STATUS 메시지("새 피드백 [BUG/P0]") 포스트.
+    - `PATCH /api/feedback/:id/status` — 상태 변경.
+    - `POST /api/feedback/:id/retriage` — 재분류.
+
+- **포털 피드백 조회** — `GET /api/portal/feedback` — 고객사 소속
+  모든 프로젝트의 피드백 처리 현황 (FR-10-07).
+
+- **웹 UI** (`/projects/[id]/feedback`)
+  - 피드백 목록 (type 아이콘, severity/status 뱃지, WorkItem 연결 표시).
+  - 피드백 등록 폼 (제출 시 자동 분류).
+  - 프로젝트 SUB_NAV에 "Feedback" 탭 추가.
+
+#### 참고
+- 벡터 유사도 검색(pgvector, FR-10-05)은 P1 후순위. 현재 DB에
+  `embedding` 컬럼 주석 처리 상태; pgvector 확장 활성화 시 전환 가능.
+
+---
+
 ## [0.13.0] — 2026-04-16
 
 ### Phase 12 — 납품 & 고객 포털 (FR-09)

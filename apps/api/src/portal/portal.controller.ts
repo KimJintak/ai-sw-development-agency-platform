@@ -10,6 +10,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { PortalService } from './portal.service'
+import { FeedbackService } from '../feedback/feedback.service'
 
 interface PortalUser {
   id: string
@@ -22,7 +23,10 @@ interface PortalUser {
 @UseGuards(JwtAuthGuard)
 @Controller('portal')
 export class PortalController {
-  constructor(private readonly service: PortalService) {}
+  constructor(
+    private readonly service: PortalService,
+    private readonly feedback: FeedbackService,
+  ) {}
 
   @Get('projects')
   @ApiOperation({ summary: '내 고객사 프로젝트 목록' })
@@ -62,6 +66,12 @@ export class PortalController {
     @Body() body: { reason?: string },
   ) {
     return this.service.rejectRequirement(user.customerId, id, body.reason)
+  }
+
+  @Get('feedback')
+  @ApiOperation({ summary: '내 피드백 처리 현황' })
+  myFeedback(@CurrentUser() user: PortalUser) {
+    return this.feedback.listByCustomer(user.customerId)
   }
 
   @Get('projects/:id/report')

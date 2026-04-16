@@ -13,6 +13,7 @@ const SUB_NAV = [
   { label: 'Design', href: '/design' },
   { label: 'QA', href: '/qa' },
   { label: 'Chat', href: '/chat' },
+  { label: 'Feedback', href: '/feedback' },
   { label: 'Releases', href: '/releases' },
 ]
 

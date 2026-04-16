@@ -15,6 +15,7 @@ import { ChatModule } from './chat/chat.module'
 import { AdminModule } from './admin/admin.module'
 import { ReleasesModule } from './releases/releases.module'
 import { PortalModule } from './portal/portal.module'
+import { FeedbackModule } from './feedback/feedback.module'
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PortalModule } from './portal/portal.module'
     AdminModule,
     ReleasesModule,
     PortalModule,
+    FeedbackModule,
   ],
 })
 export class AppModule {}
