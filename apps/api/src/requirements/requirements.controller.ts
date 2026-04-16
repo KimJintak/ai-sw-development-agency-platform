@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { RequirementsService } from './requirements.service'
+import { PmAgentService } from './pm-agent.service'
 import {
   ApproveRequirementDto,
   CreateRequirementDto,
@@ -25,7 +26,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 @UseGuards(JwtAuthGuard)
 @Controller('requirements')
 export class RequirementsController {
-  constructor(private readonly service: RequirementsService) {}
+  constructor(
+    private readonly service: RequirementsService,
+    private readonly pmAgent: PmAgentService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List requirements by projectId' })
@@ -80,6 +84,49 @@ export class RequirementsController {
   @ApiOperation({ summary: 'Unlink a work item from a requirement' })
   unlink(@Param('id') id: string, @Param('workItemId') workItemId: string) {
     return this.service.unlinkWorkItem(id, workItemId)
+  }
+
+  @Post('generate')
+  @ApiOperation({ summary: 'PM Agent: 자연어 → Cucumber Feature 자동 변환 (Claude API)' })
+  async generate(
+    @Body() body: { projectId: string; naturalLanguage: string },
+    @CurrentUser() user: { id: string },
+  ) {
+    const project = await this.service['prisma'].project.findUnique({
+      where: { id: body.projectId },
+      select: { name: true, platforms: true },
+    })
+    const result = await this.pmAgent.generateFeature({
+      projectName: project?.name ?? 'Unknown',
+      platforms: (project?.platforms ?? []) as string[],
+      naturalLanguage: body.naturalLanguage,
+    })
+    const requirement = await this.service.create(
+      {
+        projectId: body.projectId,
+        title: result.title,
+        featureFile: result.featureFile,
+        platforms: result.platforms as any,
+      },
+      user.id,
+    )
+    return { requirement, generated: result }
+  }
+
+  @Post('generate/preview')
+  @ApiOperation({ summary: 'PM Agent: Feature 미리보기만 (저장하지 않음)' })
+  async generatePreview(
+    @Body() body: { projectId: string; naturalLanguage: string },
+  ) {
+    const project = await this.service['prisma'].project.findUnique({
+      where: { id: body.projectId },
+      select: { name: true, platforms: true },
+    })
+    return this.pmAgent.generateFeature({
+      projectName: project?.name ?? 'Unknown',
+      platforms: (project?.platforms ?? []) as string[],
+      naturalLanguage: body.naturalLanguage,
+    })
   }
 
   @Delete(':id')

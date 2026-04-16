@@ -11,6 +11,28 @@
 
 ---
 
+## [0.19.0] — 2026-04-16
+
+### Phase 18 — PM Agent: 자연어 → Cucumber 자동 변환 (FR-03-03)
+
+#### 추가
+- **`PmAgentService`** (`apps/api/src/requirements/pm-agent.service.ts`)
+  - `generateFeature(input)` — Claude API(`@anthropic-ai/sdk`)로
+    자연어 요구사항을 Gherkin Feature 파일로 변환.
+  - System prompt: 프로젝트명 + 타겟 플랫폼 컨텍스트 제공. 출력은
+    순수 Gherkin(마크다운 없이).
+  - `ANTHROPIC_API_KEY` 미설정 시 **dry-run 모드** — 템플릿 기반
+    Feature 파일 생성 (개발/테스트용).
+  - 모델: `ANTHROPIC_MODEL` 환경변수로 설정 가능 (기본 `claude-sonnet-4-20250514`).
+
+- **REST 엔드포인트**
+  - `POST /api/requirements/generate` — 자연어 입력 → Feature 생성 +
+    DB 저장 + Work Item 자동 생성까지 한 번에.
+  - `POST /api/requirements/generate/preview` — Feature 미리보기만
+    (DB 저장 없이 Claude 응답 확인).
+
+---
+
 ## [0.18.0] — 2026-04-16
 
 ### Phase 17 — Presigned URL 보안 (NFR-S-05)
