@@ -32,6 +32,10 @@ interface Stalled {
   createdAt: string
   agentCard: { agentType: string; name: string }
   project: { id: string; name: string } | null
+  lastActivityAt: string
+  lastUpdateBody: string | null
+  idleMinutes: number
+  progress: number | null
 }
 
 interface Summary {
@@ -124,29 +128,59 @@ export default function AdminOpsPage() {
         <section className="border border-amber-300 bg-amber-50 rounded-lg p-4">
           <h2 className="flex items-center gap-2 font-semibold text-amber-900 mb-3">
             <AlertTriangle size={16} />
-            지연 레이더 · 15분 이상 미완료 태스크 ({stalled.length})
+            지연 레이더 · 마지막 활동 후 15분+ 무응답 ({stalled.length}건)
           </h2>
-          <ul className="space-y-1.5 text-sm">
-            {stalled.map((t) => (
-              <li key={t.id} className="flex items-center justify-between">
-                <span>
-                  <span className="font-mono text-xs text-amber-800">{t.taskType}</span>
-                  <span className="mx-2 text-amber-700">·</span>
-                  <span className="text-amber-700">{t.agentCard.agentType}</span>
-                  <span className="mx-2 text-amber-700">·</span>
-                  <Link
-                    href={t.project ? `/projects/${t.project.id}` : '#'}
-                    className="text-amber-900 hover:underline"
-                  >
-                    {t.project?.name ?? '—'}
-                  </Link>
-                </span>
-                <span className="text-xs text-amber-700">
-                  {timeAgo(t.createdAt)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-3">
+            {stalled.map((t) => {
+              const severity =
+                t.idleMinutes >= 60 ? 'bg-red-100 border-red-300' :
+                t.idleMinutes >= 30 ? 'bg-amber-100 border-amber-300' :
+                'bg-amber-50 border-amber-200'
+              return (
+                <div key={t.id} className={`border rounded-md p-3 ${severity}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-medium text-amber-900">
+                        {t.taskType}
+                      </span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-amber-200/60 text-amber-800">
+                        {t.agentCard.agentType}
+                      </span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200/60 text-slate-700">
+                        {t.status}
+                      </span>
+                      {t.progress !== null && (
+                        <span className="text-xs text-amber-700">
+                          {Math.round(t.progress * 100)}%
+                        </span>
+                      )}
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      t.idleMinutes >= 60 ? 'text-red-700' : 'text-amber-700'
+                    }`}>
+                      {t.idleMinutes}분 무응답
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <Link
+                      href={t.project ? `/projects/${t.project.id}/chat` : '#'}
+                      className="text-amber-900 hover:underline font-medium"
+                    >
+                      {t.project?.name ?? '—'}
+                    </Link>
+                    <span className="text-amber-600">
+                      마지막 활동 {timeAgo(t.lastActivityAt)}
+                    </span>
+                  </div>
+                  {t.lastUpdateBody && (
+                    <div className="text-xs text-amber-700 mt-1 truncate italic">
+                      마지막 메시지: {t.lastUpdateBody}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </section>
       )}
 

@@ -11,6 +11,28 @@
 
 ---
 
+## [0.11.0-b] — 2026-04-16
+
+### Phase 10-B — 지연 레이더 고도화
+
+#### 변경
+- **`stalledTasks()`** — 단순 `createdAt` 비교에서 **마지막 AGENT_UPDATE
+  채팅 메시지 시각** 기반으로 교체.
+  - `ChatMessage` 에서 `metadata.taskId` 가 일치하는 `AGENT_UPDATE`
+    레코드의 최신 `createdAt` 을 조회.
+  - 업데이트가 없으면 `startedAt` → `createdAt` 으로 폴백.
+  - 응답에 `lastActivityAt`, `lastUpdateBody`, `idleMinutes`,
+    `progress` 필드 추가. `stalled` 플래그가 true인 것만 반환,
+    `idleMinutes` 내림차순 정렬.
+
+- **웹 UI 지연 레이더**
+  - 카드형 레이아웃으로 전환 (리스트 → 카드).
+  - **심각도 색상**: 60분+ → 빨강, 30분+ → 짙은 앰버, 15분+ → 옅은 앰버.
+  - 각 카드에 무응답 시간(`N분 무응답`), 진행률(%), 마지막 에이전트
+    메시지 프리뷰, 프로젝트 채팅방 바로가기 링크 표시.
+
+---
+
 ## [0.11.0-a] — 2026-04-16
 
 ### Phase 10-A — Agency Ops 대시보드 + 감사 로그

@@ -44,24 +44,62 @@ export class AdminOpsService {
     return { projectCount, messageCount24h, activeTaskCount }
   }
 
-  /**
-   * Tasks that were dispatched (SUBMITTED or WORKING) more than
-   * `thresholdMinutes` ago without a completion. Used as "지연 레이더"
-   * stub — a richer version (idle since last AGENT_UPDATE) arrives later.
-   */
   async stalledTasks(thresholdMinutes = 15) {
-    const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000)
-    return this.prisma.agentTask.findMany({
+    const tasks = await this.prisma.agentTask.findMany({
       where: {
         status: { in: [AgentTaskStatus.SUBMITTED, AgentTaskStatus.WORKING] },
-        createdAt: { lt: cutoff },
       },
       orderBy: { createdAt: 'asc' },
-      take: 50,
+      take: 100,
       include: {
         agentCard: { select: { agentType: true, name: true } },
         project: { select: { id: true, name: true } },
       },
     })
+
+    if (tasks.length === 0) return []
+
+    const now = Date.now()
+    const cutoffMs = thresholdMinutes * 60 * 1000
+
+    const enriched = await Promise.all(
+      tasks.map(async (task) => {
+        const lastUpdate = await this.prisma.chatMessage.findFirst({
+          where: {
+            projectId: task.projectId ?? undefined,
+            kind: ChatMessageKind.AGENT_UPDATE,
+            metadata: { path: ['taskId'], equals: task.id },
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true, body: true },
+        })
+
+        const lastActivityAt = lastUpdate?.createdAt ?? task.startedAt ?? task.createdAt
+        const idleMs = now - lastActivityAt.getTime()
+        const progress = this.extractProgress(task.result)
+
+        return {
+          ...task,
+          lastActivityAt,
+          lastUpdateBody: lastUpdate?.body ?? null,
+          idleMinutes: Math.round(idleMs / 60_000),
+          progress,
+          stalled: idleMs > cutoffMs,
+        }
+      }),
+    )
+
+    return enriched
+      .filter((t) => t.stalled)
+      .sort((a, b) => b.idleMinutes - a.idleMinutes)
+      .slice(0, 50)
+  }
+
+  private extractProgress(result: unknown): number | null {
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
+      const r = result as Record<string, unknown>
+      if (typeof r.progress === 'number') return r.progress
+    }
+    return null
   }
 }
