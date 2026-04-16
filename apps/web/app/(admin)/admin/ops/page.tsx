@@ -6,13 +6,22 @@ import apiClient from '@/lib/api-client'
 import {
   Activity,
   AlertTriangle,
+  Eye,
   FolderKanban,
   MessageSquare,
+  Plus,
   Search,
   ShieldAlert,
+  Trash2,
+  X,
 } from 'lucide-react'
 
 type Kind = 'TEXT' | 'STATUS' | 'COMMAND' | 'AGENT_UPDATE' | ''
+
+interface WatchMatch {
+  keyword: string
+  color: string
+}
 
 interface FeedItem {
   id: string
@@ -22,6 +31,15 @@ interface FeedItem {
   authorName: string
   kind: Exclude<Kind, ''>
   body: string
+  createdAt: string
+  watchMatches?: WatchMatch[]
+}
+
+interface WatchKeyword {
+  id: string
+  keyword: string
+  color: string
+  active: boolean
   createdAt: string
 }
 
@@ -48,6 +66,7 @@ export default function AdminOpsPage() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [stalled, setStalled] = useState<Stalled[]>([])
+  const [watchKeywords, setWatchKeywords] = useState<WatchKeyword[]>([])
   const [q, setQ] = useState('')
   const [kind, setKind] = useState<Kind>('')
   const [loading, setLoading] = useState(true)
@@ -55,16 +74,18 @@ export default function AdminOpsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [s, f, st] = await Promise.all([
+      const [s, f, st, wk] = await Promise.all([
         apiClient.get<Summary>('/api/admin/ops/summary'),
         apiClient.get<FeedItem[]>('/api/admin/ops/feed', {
           params: { q: q || undefined, kind: kind || undefined, limit: 100 },
         }),
         apiClient.get<Stalled[]>('/api/admin/ops/stalled', { params: { minutes: 15 } }),
+        apiClient.get<WatchKeyword[]>('/api/admin/watchlist'),
       ])
       setSummary(s.data)
       setFeed(f.data)
       setStalled(st.data)
+      setWatchKeywords(wk.data)
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } }).response?.status
       if (status === 403) setForbidden(true)
@@ -184,6 +205,8 @@ export default function AdminOpsPage() {
         </section>
       )}
 
+      <WatchlistPanel keywords={watchKeywords} onRefresh={load} />
+
       <section className="border rounded-lg bg-card">
         <header className="flex items-center gap-3 px-4 py-3 border-b">
           <h2 className="font-semibold">크로스 프로젝트 피드</h2>
@@ -249,6 +272,119 @@ function SummaryCard({
   )
 }
 
+const WATCH_COLORS: Record<string, string> = {
+  yellow: 'bg-yellow-200',
+  red: 'bg-red-200',
+  orange: 'bg-orange-200',
+  green: 'bg-green-200',
+  blue: 'bg-blue-200',
+  purple: 'bg-purple-200',
+}
+
+function WatchlistPanel({
+  keywords,
+  onRefresh,
+}: {
+  keywords: WatchKeyword[]
+  onRefresh: () => void
+}) {
+  const [adding, setAdding] = useState(false)
+  const [newKw, setNewKw] = useState('')
+  const [newColor, setNewColor] = useState('yellow')
+
+  const addKeyword = async () => {
+    if (!newKw.trim()) return
+    await apiClient.post('/api/admin/watchlist', { keyword: newKw.trim(), color: newColor })
+    setNewKw('')
+    setAdding(false)
+    onRefresh()
+  }
+
+  const removeKeyword = async (id: string) => {
+    await apiClient.delete(`/api/admin/watchlist/${id}`)
+    onRefresh()
+  }
+
+  const toggleActive = async (id: string, active: boolean) => {
+    await apiClient.patch(`/api/admin/watchlist/${id}`, { active: !active })
+    onRefresh()
+  }
+
+  return (
+    <section className="border rounded-lg bg-card">
+      <header className="flex items-center justify-between px-4 py-2.5 border-b">
+        <h2 className="flex items-center gap-2 font-semibold text-sm">
+          <Eye size={14} />
+          키워드 와치리스트
+          <span className="text-xs text-muted-foreground font-normal">
+            매칭 메시지가 피드에서 하이라이트됩니다
+          </span>
+        </h2>
+        <button
+          onClick={() => setAdding(!adding)}
+          className="flex items-center gap-1 text-xs px-2 py-1 rounded-md border hover:bg-muted"
+        >
+          {adding ? <X size={12} /> : <Plus size={12} />}
+          {adding ? '취소' : '추가'}
+        </button>
+      </header>
+      <div className="p-3">
+        {adding && (
+          <div className="flex gap-2 mb-3">
+            <input
+              value={newKw}
+              onChange={(e) => setNewKw(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addKeyword()}
+              placeholder="키워드 (예: 긴급, 취소, 불만)"
+              className="flex-1 px-2 py-1.5 text-sm rounded-md border bg-background"
+            />
+            <select
+              value={newColor}
+              onChange={(e) => setNewColor(e.target.value)}
+              className="px-2 py-1.5 text-sm rounded-md border bg-background"
+            >
+              {Object.keys(WATCH_COLORS).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <button
+              onClick={addKeyword}
+              className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground"
+            >
+              등록
+            </button>
+          </div>
+        )}
+        {keywords.length === 0 ? (
+          <div className="text-xs text-muted-foreground italic py-2">
+            등록된 키워드가 없습니다. "추가" 를 눌러 등록하세요.
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {keywords.map((kw) => (
+              <span
+                key={kw.id}
+                className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${
+                  kw.active
+                    ? `${WATCH_COLORS[kw.color] ?? 'bg-yellow-200'} text-foreground`
+                    : 'bg-muted text-muted-foreground line-through'
+                }`}
+              >
+                <button onClick={() => toggleActive(kw.id, kw.active)} title="활성/비활성 토글">
+                  {kw.keyword}
+                </button>
+                <button onClick={() => removeKeyword(kw.id)} className="opacity-50 hover:opacity-100">
+                  <Trash2 size={10} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 function FeedRow({ m, q }: { m: FeedItem; q: string }) {
   const kindTone: Record<string, string> = {
     COMMAND: 'bg-blue-500/10 text-blue-600',
@@ -256,8 +392,9 @@ function FeedRow({ m, q }: { m: FeedItem; q: string }) {
     AGENT_UPDATE: 'bg-indigo-500/10 text-indigo-600',
     TEXT: 'bg-primary/10 text-primary',
   }
+  const hasWatch = m.watchMatches && m.watchMatches.length > 0
   return (
-    <div className="px-4 py-3 text-sm hover:bg-muted/40">
+    <div className={`px-4 py-3 text-sm hover:bg-muted/40 ${hasWatch ? 'border-l-2 border-yellow-400' : ''}`}>
       <div className="flex items-center gap-2 mb-1 text-xs">
         <Link
           href={`/projects/${m.project.id}/chat`}
@@ -271,9 +408,17 @@ function FeedRow({ m, q }: { m: FeedItem; q: string }) {
         <span className="text-muted-foreground">
           {m.authorType === 'SYSTEM' ? 'System' : m.authorName}
         </span>
+        {hasWatch && m.watchMatches!.map((wm) => (
+          <span
+            key={wm.keyword}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${WATCH_COLORS[wm.color] ?? 'bg-yellow-200'}`}
+          >
+            {wm.keyword}
+          </span>
+        ))}
         <span className="text-muted-foreground ml-auto">{timeAgo(m.createdAt)}</span>
       </div>
-      <div className="whitespace-pre-wrap">{highlight(m.body, q)}</div>
+      <div className="whitespace-pre-wrap">{highlightMulti(m.body, q, m.watchMatches)}</div>
     </div>
   )
 }
@@ -287,6 +432,44 @@ function highlight(text: string, q: string) {
       {text.slice(0, idx)}
       <mark className="bg-yellow-200 px-0.5 rounded">{text.slice(idx, idx + q.length)}</mark>
       {text.slice(idx + q.length)}
+    </>
+  )
+}
+
+function highlightMulti(
+  text: string,
+  q: string,
+  watchMatches?: WatchMatch[],
+): React.ReactNode {
+  const terms: { term: string; color: string }[] = []
+  if (q) terms.push({ term: q, color: 'yellow' })
+  if (watchMatches) {
+    for (const wm of watchMatches) {
+      if (wm.keyword !== q.toLowerCase()) {
+        terms.push({ term: wm.keyword, color: wm.color })
+      }
+    }
+  }
+  if (terms.length === 0) return text
+
+  const escaped = terms.map((t) => t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const re = new RegExp(`(${escaped.join('|')})`, 'gi')
+  const parts = text.split(re)
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        const match = terms.find(
+          (t) => t.term.toLowerCase() === part.toLowerCase(),
+        )
+        return match ? (
+          <mark key={i} className={`${WATCH_COLORS[match.color] ?? 'bg-yellow-200'} px-0.5 rounded`}>
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      })}
     </>
   )
 }

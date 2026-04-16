@@ -682,3 +682,16 @@ model AdminAuditLog {
   @@index([action, createdAt])
   @@map("admin_audit_logs")
 }
+
+model WatchKeyword {
+  id        String   @id @default(cuid())
+  keyword   String
+  createdBy String   @map("created_by")
+  color     String   @default("yellow")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([keyword])
+  @@map("watch_keywords")
+}

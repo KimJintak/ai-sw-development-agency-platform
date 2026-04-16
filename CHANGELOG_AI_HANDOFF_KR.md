@@ -11,6 +11,38 @@
 
 ---
 
+## [0.11.0-c] — 2026-04-16
+
+### Phase 10-C — 키워드 와치리스트
+
+#### 추가
+- **DB 모델** — `WatchKeyword` (keyword, color, active, createdBy).
+  `@@unique([keyword])` 로 중복 방지.
+
+- **WatchlistService** (`apps/api/src/admin/watchlist.service.ts`)
+  - CRUD: `list()`, `listActive()`, `create()`, `update()`, `remove()`.
+  - `matchAll(text, keywords)` — 텍스트에서 활성 키워드 전부 매칭.
+
+- **AdminOpsController 확장**
+  - `GET /api/admin/watchlist` — 전체 목록.
+  - `POST /api/admin/watchlist` — 키워드 등록 (색상 선택: yellow/red/
+    orange/green/blue/purple).
+  - `PATCH /api/admin/watchlist/:id` — 색상/활성 토글.
+  - `DELETE /api/admin/watchlist/:id` — 삭제.
+  - 모든 CRUD에 감사 로그 기록.
+
+- **피드 매칭** — `GET /ops/feed` 가 응답 시 각 메시지에 `watchMatches[]`
+  (매칭된 키워드 + 색상)를 포함. 클라이언트에서 별도 검색 없이 즉시 표시.
+
+- **웹 UI**
+  - **와치리스트 관리 패널** — 키워드 추가(색상 드롭다운), 토글(활성/비활성),
+    삭제. 칩형 태그로 현재 목록 표시.
+  - **피드 하이라이트** — 매칭 메시지에 왼쪽 노란 보더, 키워드별 색상 뱃지,
+    본문 내 키워드를 해당 색상으로 `<mark>` 하이라이트.
+  - 검색어(`q`)와 와치리스트 키워드를 동시에 멀티 하이라이트.
+
+---
+
 ## [0.11.0-b] — 2026-04-16
 
 ### Phase 10-B — 지연 레이더 고도화
