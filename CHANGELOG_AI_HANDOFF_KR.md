@@ -11,6 +11,30 @@
 
 ---
 
+## [0.20.0] — 2026-04-16
+
+### Phase 19 — 피드백 유사도 검색 (FR-10-05)
+
+#### 추가
+- **`SimilarityService`** (`apps/api/src/feedback/similarity.service.ts`)
+  - `onModuleInit()` 에서 `pg_extension` 테이블 조회로 `pgvector` /
+    `pg_trgm` 가용 여부 자동 감지. `pg_trgm` 없으면 자동 `CREATE
+    EXTENSION` 시도.
+  - **pg_trgm 모드** (기본): `similarity()` 함수로 title + body 대비
+    트라이그램 유사도 계산. threshold 이상만 반환.
+  - **폴백 모드**: 단어 분할 후 LIKE 매칭 비율 기반.
+  - pgvector가 활성화되면 벡터 검색으로 전환 가능하도록 구조 설계
+    (현재 embedding 컬럼 주석 상태).
+
+- **`GET /api/projects/:id/feedback/similar?q=...`** — 유사 피드백
+  검색 (limit, threshold 옵션).
+
+- **피드백 생성 시 중복 감지** — `POST /projects/:id/feedback` 호출 시
+  자동으로 유사도 50%+ 피드백을 스캔. 결과에 `similarFeedback[]` 첨부.
+  채팅 알림에 `"유사 피드백 N건 감지 (최고 X%)"` 포함.
+
+---
+
 ## [0.19.0] — 2026-04-16
 
 ### Phase 18 — PM Agent: 자연어 → Cucumber 자동 변환 (FR-03-03)

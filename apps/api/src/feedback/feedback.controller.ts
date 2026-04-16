@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { FeedbackSource, FeedbackStatus } from '@prisma/client'
 import { FeedbackService } from './feedback.service'
+import { SimilarityService } from './similarity.service'
 import { ChatService } from '../chat/chat.service'
 import { ChatGateway } from '../chat/chat.gateway'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
@@ -23,6 +24,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 export class FeedbackController {
   constructor(
     private readonly service: FeedbackService,
+    private readonly similarity: SimilarityService,
     private readonly chat: ChatService,
     private readonly chatGw: ChatGateway,
   ) {}
@@ -58,19 +60,28 @@ export class FeedbackController {
       sentryEventId?: string
     },
   ) {
+    const similar = await this.similarity.findSimilar(projectId, `${body.title} ${body.body}`, {
+      limit: 3,
+      threshold: 0.5,
+    })
+
     const fb = await this.service.create({ projectId, ...body })
+
+    const dupNote = similar.length > 0
+      ? ` | 유사 피드백 ${similar.length}건 감지 (최고 ${Math.round(similar[0].similarity * 100)}%)`
+      : ''
 
     try {
       const msg = await this.chat.postSystem(projectId, {
         body: `새 피드백 [${fb.type ?? '?'}/${fb.severity ?? '?'}] — ${fb.title}${
           fb.workItemId ? ' → WorkItem 자동 생성됨' : ''
-        }`,
+        }${dupNote}`,
         kind: 'STATUS',
       })
       this.chatGw.broadcastMessage(projectId, msg)
     } catch {}
 
-    return fb
+    return { ...fb, similarFeedback: similar.length > 0 ? similar : undefined }
   }
 
   @Patch('feedback/:id/status')
@@ -83,5 +94,19 @@ export class FeedbackController {
   @ApiOperation({ summary: '재분류 (type/severity 재계산)' })
   retriage(@Param('id') id: string) {
     return this.service.triage(id)
+  }
+
+  @Get('projects/:projectId/feedback/similar')
+  @ApiOperation({ summary: '유사 피드백 검색 (pg_trgm / pgvector 자동 선택)' })
+  findSimilar(
+    @Param('projectId') projectId: string,
+    @Query('q') q: string,
+    @Query('limit') limit?: string,
+    @Query('threshold') threshold?: string,
+  ) {
+    return this.similarity.findSimilar(projectId, q ?? '', {
+      limit: limit ? Number(limit) : undefined,
+      threshold: threshold ? Number(threshold) : undefined,
+    })
   }
 }
