@@ -11,6 +11,7 @@ export type DemoStepKind =
   | 'reviewApproved'
   | 'testRun'
   | 'testReport'
+  | 'chatMessage'
 
 export type CalloutTarget =
   | 'project'
@@ -19,6 +20,9 @@ export type CalloutTarget =
   | 'agent'
   | 'qa'
   | 'bugs'
+  | 'chat'
+
+export type ChatAuthorType = 'USER' | 'SYSTEM' | 'AGENT'
 
 export interface DemoStep {
   at: number
@@ -282,8 +286,133 @@ export const qaRunScenario: DemoScenario = {
   ],
 }
 
+export const chatTaskScenario: DemoScenario = {
+  id: 'chat-task',
+  title: '채팅으로 작업 지시',
+  summary: '프로젝트 채팅방에서 `/task` 슬래시 명령으로 에이전트에 직접 작업을 지시하고, 진행 상황을 실시간으로 주고받는 흐름.',
+  durationMs: 17_000,
+  steps: [
+    {
+      at: 0,
+      kind: 'narration',
+      title: '채팅방 접속',
+      detail: 'PM이 프로젝트 채팅방에 들어옵니다. 에이전트·멤버가 한 방에 모여 있습니다.',
+      callout: {
+        target: 'chat',
+        message: '프로젝트별 하나의 채팅방에 사람·에이전트·시스템 봇이 모두 참여합니다.',
+      },
+    },
+    {
+      at: 1500,
+      kind: 'chatMessage',
+      title: 'PM 인사',
+      data: {
+        author: 'USER',
+        authorName: 'PM 김지훈',
+        body: '안녕하세요. 로그인 화면부터 구현 시작할게요.',
+      },
+    },
+    {
+      at: 3500,
+      kind: 'chatMessage',
+      title: '/task 슬래시 명령 입력',
+      detail: '`/task @AGENT_TYPE task_type [REF]` 문법으로 에이전트에 직접 지시.',
+      data: {
+        author: 'USER',
+        authorName: 'PM 김지훈',
+        body: '/task @MAC_DEV code_generation REQ-001',
+        kind: 'COMMAND',
+      },
+      callout: {
+        target: 'chat',
+        message: '/task 명령은 서버에서 파싱되어 실제로 AgentTask를 생성하고 Orchestrator에 디스패치됩니다.',
+      },
+    },
+    {
+      at: 5500,
+      kind: 'chatMessage',
+      title: '시스템 봇: 디스패치 확인',
+      data: {
+        author: 'SYSTEM',
+        authorName: 'System',
+        body: '태스크 디스패치 완료 → @MAC_DEV · code_generation · REQ-001',
+        kind: 'STATUS',
+      },
+    },
+    {
+      at: 7500,
+      kind: 'chatMessage',
+      title: '에이전트 진행 보고 (10%)',
+      data: {
+        author: 'AGENT',
+        authorName: 'MAC_DEV 에이전트',
+        body: '요구사항 분석 중... (10%)',
+        kind: 'AGENT_UPDATE',
+      },
+    },
+    {
+      at: 9500,
+      kind: 'chatMessage',
+      title: '에이전트 진행 보고 (60%)',
+      data: {
+        author: 'AGENT',
+        authorName: 'MAC_DEV 에이전트',
+        body: 'LoginView.swift 생성 중... (60%)',
+        kind: 'AGENT_UPDATE',
+      },
+    },
+    {
+      at: 11_500,
+      kind: 'chatMessage',
+      title: '팀원 질문',
+      data: {
+        author: 'USER',
+        authorName: '이소라',
+        body: 'Apple Sign-In도 포함되나요?',
+      },
+    },
+    {
+      at: 13_000,
+      kind: 'chatMessage',
+      title: 'PM 답변',
+      data: {
+        author: 'USER',
+        authorName: 'PM 김지훈',
+        body: '아니요, 이번 스프린트는 Email 로그인만요. SSO는 REQ-004에서 다룰게요.',
+      },
+    },
+    {
+      at: 14_500,
+      kind: 'chatMessage',
+      title: '에이전트 완료 보고',
+      data: {
+        author: 'AGENT',
+        authorName: 'MAC_DEV 에이전트',
+        body: 'LoginView.swift 생성 중... (100%)',
+        kind: 'AGENT_UPDATE',
+      },
+    },
+    {
+      at: 16_000,
+      kind: 'chatMessage',
+      title: '시스템 봇: 완료',
+      data: {
+        author: 'SYSTEM',
+        authorName: 'System',
+        body: '태스크 완료 ✓ — PR #317 열림',
+        kind: 'STATUS',
+      },
+      callout: {
+        target: 'chat',
+        message: '작업 이력이 대화 맥락 그대로 남아, 나중에 "이 변경이 왜 들어갔는지" 추적하기 쉽습니다.',
+      },
+    },
+  ],
+}
+
 export const scenarios: DemoScenario[] = [
   projectKickoffScenario,
   bugTriageScenario,
   qaRunScenario,
+  chatTaskScenario,
 ]

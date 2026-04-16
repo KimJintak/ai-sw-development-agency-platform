@@ -19,6 +19,9 @@ import {
   Lightbulb,
   X,
   Code2,
+  MessageSquare,
+  Terminal,
+  Bot,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -57,6 +60,18 @@ export function DemoPlayer({ scenario }: { scenario: DemoScenario }) {
   const hasProjectFlow = project || requirements.length > 0 || design
   const hasBugFlow = bug || autoFix || reviewApproved
   const hasQaFlow = testRuns.length > 0 || testReport
+  const chatMessages = runner.activeSteps
+    .filter((s) => s.kind === 'chatMessage')
+    .map((s, i) => ({
+      idx: i,
+      ...(s.data as {
+        author: 'USER' | 'SYSTEM' | 'AGENT'
+        authorName: string
+        body: string
+        kind?: string
+      }),
+    }))
+  const hasChatFlow = chatMessages.length > 0
 
   return (
     <div className="space-y-6">
@@ -183,6 +198,21 @@ export function DemoPlayer({ scenario }: { scenario: DemoScenario }) {
               ) : (
                 <Empty>버그 리포트 수신 대기 중.</Empty>
               )}
+            </Panel>
+          )}
+
+          {hasChatFlow && (
+            <Panel
+              title="프로젝트 채팅"
+              icon={<MessageSquare size={16} />}
+              ready
+              highlight={runner.currentStep?.callout?.target === 'chat'}
+            >
+              <div className="space-y-3">
+                {chatMessages.map((m) => (
+                  <ChatBubble key={m.idx} m={m} />
+                ))}
+              </div>
             </Panel>
           )}
 
@@ -444,6 +474,51 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex">
       <span className="w-20 text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
+    </div>
+  )
+}
+
+function ChatBubble({
+  m,
+}: {
+  m: { author: 'USER' | 'SYSTEM' | 'AGENT'; authorName: string; body: string; kind?: string }
+}) {
+  if (m.author === 'SYSTEM') {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center py-1">
+        <Terminal size={12} />
+        <span>{m.body}</span>
+      </div>
+    )
+  }
+  const isAgent = m.author === 'AGENT'
+  const isCommand = m.kind === 'COMMAND'
+  const toneBg = isAgent ? 'bg-indigo-500/10' : 'bg-primary/10'
+  const toneTxt = isAgent ? 'text-indigo-600' : 'text-primary'
+  return (
+    <div className="flex gap-2">
+      <div
+        className={`h-7 w-7 rounded-full shrink-0 flex items-center justify-center text-xs font-medium ${toneBg} ${toneTxt}`}
+      >
+        {isAgent ? <Bot size={12} /> : m.authorName.charAt(0)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span className="text-sm font-medium">{m.authorName}</span>
+          {isAgent && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600">
+              AGENT
+            </span>
+          )}
+        </div>
+        <div
+          className={`text-sm mt-0.5 whitespace-pre-wrap ${
+            isCommand ? 'font-mono bg-muted/60 px-2 py-1 rounded inline-block' : ''
+          }`}
+        >
+          {m.body}
+        </div>
+      </div>
     </div>
   )
 }
