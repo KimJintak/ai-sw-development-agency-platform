@@ -11,6 +11,27 @@
 
 ---
 
+## [0.18.0] — 2026-04-16
+
+### Phase 17 — Presigned URL 보안 (NFR-S-05)
+
+#### 추가
+- **`PresignedUrlService`** (`apps/api/src/common/services/`)
+  - `sign(s3Key)` — HMAC-SHA256 서명 + 만료 epoch 기반 임시 URL 생성.
+    기본 24시간 유효 (`PRESIGN_TTL_HOURS` 환경변수로 조절 가능).
+  - `verify(s3Key, expires, sig)` — `crypto.timingSafeEqual` 로
+    타이밍 공격 방지 검증.
+  - 시크릿 키: `PRESIGN_SECRET` 환경변수 (프로덕션 배포 시 Secrets
+    Manager에서 주입 권장).
+
+- **`GET /api/builds/:id/download`** — 빌드의 `s3Key`에 대한
+  presigned URL을 발급. 기존 `cloudfrontUrl` 직접 노출 대신 사용.
+
+- **포털에도 동일 서비스 등록** — 포털 빌드 다운로드에서도 presigned
+  URL 경유로 전환 가능하도록 `PresignedUrlService` 프로바이더 추가.
+
+---
+
 ## [0.17.0] — 2026-04-16
 
 ### Phase 16 — 요구사항 → Work Item 자동 생성 (FR-03-05)

@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { BuildStatus, Platform, ReleaseStatus } from '@prisma/client'
 import { ReleasesService } from './releases.service'
 import { DeployPipelineService } from './deploy-pipeline.service'
+import { PresignedUrlService } from '../common/services/presigned-url.service'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 
 @ApiTags('Releases & Builds')
@@ -23,6 +24,7 @@ export class ReleasesController {
   constructor(
     private readonly service: ReleasesService,
     private readonly pipeline: DeployPipelineService,
+    private readonly presign: PresignedUrlService,
   ) {}
 
   @Get('projects/:projectId/releases')
@@ -104,6 +106,16 @@ export class ReleasesController {
   @ApiOperation({ summary: '배포 롤백' })
   rollback(@Param('id') id: string) {
     return this.pipeline.rollback(id)
+  }
+
+  @Get('builds/:id/download')
+  @ApiOperation({ summary: '빌드 다운로드 Presigned URL 발급 (24시간 유효)' })
+  async downloadUrl(@Param('id') id: string) {
+    const build = await this.service.updateBuild(id, {})
+    if (!build.s3Key) {
+      return { error: 'No artifact available' }
+    }
+    return this.presign.sign(build.s3Key)
   }
 
   @Get('projects/:projectId/deploy-history')
