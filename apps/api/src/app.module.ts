@@ -12,6 +12,7 @@ import { RequirementsModule } from './requirements/requirements.module'
 import { DesignModule } from './design/design.module'
 import { QaModule } from './qa/qa.module'
 import { ChatModule } from './chat/chat.module'
+import { AdminModule } from './admin/admin.module'
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ChatModule } from './chat/chat.module'
     DesignModule,
     QaModule,
     ChatModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

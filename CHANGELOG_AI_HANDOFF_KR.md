@@ -11,6 +11,43 @@
 
 ---
 
+## [0.11.0-a] — 2026-04-16
+
+### Phase 10-A — Agency Ops 대시보드 + 감사 로그
+
+#### 추가
+- **DB 모델** — `AdminAuditLog` (userId, action, resource, params,
+  ip, userAgent). `@@index([userId, createdAt])` + `@@index([action, createdAt])`.
+
+- **NestJS Admin 모듈** (`apps/api/src/admin/`)
+  - `AdminAuditService` — `record()` (best-effort 쓰기), `list()` 조회.
+  - `AdminOpsService`:
+    - `summary()` — 활성 프로젝트 수, 24h 메시지 수, 활성 태스크 수.
+    - `feed(query)` — 크로스 프로젝트 채팅 피드. 키워드 검색(`q`, 대소문자 무시),
+      메시지 종류 필터(`kind`), 프로젝트 필터, 커서 페이지네이션.
+    - `stalledTasks(minutes)` — SUBMITTED/WORKING 상태로 N분 이상
+      완료되지 않은 태스크 목록 (지연 레이더).
+  - `AdminOpsController` — `@Roles(ADMIN)` + `RolesGuard`.
+    - `GET /api/admin/ops/summary`
+    - `GET /api/admin/ops/feed`
+    - `GET /api/admin/ops/stalled`
+    - `GET /api/admin/audit` — 감사 로그 조회 (본인 조회도 기록됨)
+    - **모든 엔드포인트**에서 `AdminAuditService.record()` 호출.
+
+- **웹 UI** (`/admin/ops`)
+  - 요약 카드 (활성 프로젝트 · 24h 메시지 · 활성 태스크).
+  - **지연 레이더** — 15분 이상 미완료 태스크를 경고 배너에 표시.
+  - **크로스 프로젝트 피드** — 전체 메시지를 시간 역순으로 표시.
+    키워드 검색 (하이라이트), 종류 필터 드롭다운. 15초 자동 새로고침.
+  - ADMIN 아닌 사용자는 403 에러 화면.
+  - 사이드바에 "Admin Ops" 항목 추가.
+
+#### 보안
+- 모든 Admin Ops 조회 시 IP, userAgent, 파라미터와 함께 감사 로그에
+  기록됨. ADMIN 외 역할은 `RolesGuard`에 의해 완전 차단.
+
+---
+
 ## [0.10.0-d] — 2026-04-16
 
 ### Phase 9-D — Demo Tour "채팅으로 작업 지시" 시나리오

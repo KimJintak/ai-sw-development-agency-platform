@@ -12,6 +12,7 @@ import {
   Building2,
   PlayCircle,
   Inbox,
+  ShieldAlert,
 } from 'lucide-react'
 
 const nav = [
@@ -22,6 +23,7 @@ const nav = [
   { href: '/agents', label: 'Agents', icon: Bot },
   { href: '/feedback', label: 'Feedback', icon: MessageSquare },
   { href: '/demo', label: 'Demo Tour', icon: PlayCircle },
+  { href: '/admin/ops', label: 'Admin Ops', icon: ShieldAlert },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
