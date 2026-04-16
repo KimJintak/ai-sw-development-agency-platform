@@ -11,6 +11,28 @@
 
 ---
 
+## [0.16.0] — 2026-04-16
+
+### Phase 15 — CRM 자동 알림 (FR-01-04, FR-01-05)
+
+#### 추가
+- **`CrmNotificationsService`** (`apps/api/src/crm/notifications/`)
+  - `onNewOpportunity(oppId)` — 신규 영업기회 생성 시 전 활성
+    프로젝트 채팅방에 `[CRM] 새 영업 기회: ...` STATUS 포스트.
+  - `@Cron(EVERY_DAY_AT_9AM) checkExpiringContracts()` — 매일 09시에
+    30일/7일/1일 전 만료 계약 스캔. 해당 프로젝트 + 전체 활성
+    프로젝트에 만료 경고 포스트.
+  - `getRecentAlerts()` — 최근 7일 신규 영업기회 + 30일 내 만료 예정
+    계약 목록.
+
+- **REST 엔드포인트**
+  - `GET /api/crm/notifications` — 최근 CRM 알림 목록.
+  - `GET /api/crm/notifications/check-expiring` — 만료 체크 수동 트리거.
+
+- **`@nestjs/schedule`** + `ScheduleModule.forRoot()` 추가.
+
+---
+
 ## [0.15.0] — 2026-04-16
 
 ### Phase 14 — 납품 보고서 PDF (FR-09-04)
