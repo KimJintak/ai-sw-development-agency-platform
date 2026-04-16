@@ -11,6 +11,23 @@
 
 ---
 
+## [0.17.0] — 2026-04-16
+
+### Phase 16 — 요구사항 → Work Item 자동 생성 (FR-03-05)
+
+#### 추가
+- **`RequirementsService.create()`** — 요구사항 생성 시 Feature 파일에서
+  `Scenario:` 라인을 파싱하여 각 시나리오별 Work Item(STORY, BACKLOG)을
+  자동 생성하고 `RequirementLink` 로 양방향 연결.
+  - 시나리오가 없으면 요구사항 제목으로 1개 Work Item 생성.
+  - 실패 시 로그만 남기고 요구사항 생성은 정상 완료(best-effort).
+
+#### 참고
+- FR-03-03 (PM Agent가 자연어를 Cucumber로 자동 변환)은 Claude API
+  연동이 필요하여 별도 Phase로 분리.
+
+---
+
 ## [0.16.0] — 2026-04-16
 
 ### Phase 15 — CRM 자동 알림 (FR-01-04, FR-01-05)

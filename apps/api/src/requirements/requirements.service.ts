@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
-import { Platform, Prisma, RequirementStatus } from '@prisma/client'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Platform, Prisma, RequirementStatus, WorkItemStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import {
   ApproveRequirementDto,
@@ -10,6 +10,8 @@ import {
 
 @Injectable()
 export class RequirementsService {
+  private readonly logger = new Logger(RequirementsService.name)
+
   constructor(private readonly prisma: PrismaService) {}
 
   findByProject(projectId: string) {
@@ -64,8 +66,48 @@ export class RequirementsService {
         },
       })
 
+      await this.autoCreateWorkItem(tx, requirement)
+
       return requirement
     })
+  }
+
+  private async autoCreateWorkItem(
+    tx: Prisma.TransactionClient,
+    req: { id: string; projectId: string; title: string; featureFile: string; platforms: Platform[] },
+  ) {
+    try {
+      const scenarios = this.parseScenariosFromFeature(req.featureFile)
+      if (scenarios.length === 0) scenarios.push(req.title)
+
+      for (const scenarioTitle of scenarios) {
+        const workItem = await tx.workItem.create({
+          data: {
+            projectId: req.projectId,
+            title: scenarioTitle,
+            description: `Auto-generated from requirement: ${req.title}`,
+            type: 'STORY',
+            status: WorkItemStatus.BACKLOG,
+            priority: 'P2',
+            platform: req.platforms[0] ?? null,
+          },
+        })
+        await tx.requirementLink.create({
+          data: { requirementId: req.id, workItemId: workItem.id },
+        })
+      }
+      this.logger.log(`Auto-created ${scenarios.length} WorkItem(s) from requirement ${req.id}`)
+    } catch (err) {
+      this.logger.warn(`Auto-create WorkItems failed for req ${req.id}: ${(err as Error).message}`)
+    }
+  }
+
+  private parseScenariosFromFeature(featureFile: string): string[] {
+    const lines = featureFile.split('\n')
+    return lines
+      .filter((l) => /^\s*Scenario:/i.test(l))
+      .map((l) => l.replace(/^\s*Scenario:\s*/i, '').trim())
+      .filter(Boolean)
   }
 
   /**
