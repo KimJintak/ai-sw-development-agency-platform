@@ -11,6 +11,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.20.0] — 2026-04-16
+### Phase 19 — Feedback similarity search (FR-10-05)
+- SimilarityService: auto-detects pg_trgm/pgvector, falls back to word-split LIKE matching.
+- GET /projects/:id/feedback/similar for explicit duplicate lookup.
+- Feedback creation auto-scans for 50%+ similar items, appends results.
+
+## [0.19.0] — 2026-04-16
+### Phase 18 — PM Agent: natural language → Cucumber (FR-03-03)
+- PmAgentService: Claude API converts natural language to Gherkin Feature files.
+- Dry-run mode when ANTHROPIC_API_KEY unset.
+- POST /requirements/generate (persist) and /generate/preview (preview-only).
+
+## [0.18.0] — 2026-04-16
+### Phase 17 — Presigned download URLs (NFR-S-05)
+- PresignedUrlService: HMAC-SHA256 signed URLs, 24h TTL, timing-safe verification.
+- GET /builds/:id/download returns signed URL instead of raw CloudFront path.
+
+## [0.17.0] — 2026-04-16
+### Phase 16 — Auto-generate Work Items from requirements (FR-03-05)
+- RequirementsService.create() parses Scenario: lines from Gherkin and creates STORY WorkItems linked via RequirementLink.
+
+## [0.16.0] — 2026-04-16
+### Phase 15 — CRM auto-notifications (FR-01-04, FR-01-05)
+- CrmNotificationsService: new opportunity alerts + @Cron daily contract expiry check (30/7/1 day warnings) posted to project chats.
+- @nestjs/schedule + ScheduleModule added.
+
+## [0.15.0] — 2026-04-16
+### Phase 14 — Delivery report PDF (FR-09-04)
+- ReportPdfService: pdfkit-based A4 PDF with summary, requirements, releases, test runs.
+- GET /portal/projects/:id/report/pdf endpoint.
+
+## [0.14.0] — 2026-04-16
+### Phase 13 — Post-deploy feedback loop (FR-10)
+- FeedbackService: keyword-based auto-triage (type + severity), P0/P1 auto-creates WorkItem.
+- Portal: GET /portal/feedback for customer-facing status tracking.
+- Web: /projects/[id]/feedback page with create form and auto-classification.
+
+## [0.13.0] — 2026-04-16
+### Phase 12 — Client portal & delivery (FR-09)
+- PortalUser auth with customerId in JWT.
+- Portal REST: project list, progress, builds, requirements approve/reject, delivery report.
+- Web: /portal route group with login, project list, project detail (4 tabs).
+
+## [0.12.0] — 2026-04-16
+### Phase 11 — Build & deploy management (FR-08)
+- ReleasesService: release CRUD, status state machine, test-pass gating, per-platform builds.
+- DeployPipelineService: test verify → build → S3/CloudFront → status, chat integration.
+- Web: /projects/[id]/releases split-panel UI.
+
+## [0.11.0-c] — 2026-04-16
+### Phase 10-C — Keyword watchlist with feed highlighting
+- WatchKeyword model, CRUD, server-side matchAll(). Feed enriched with watchMatches[].
+- Web: watchlist management panel + multi-keyword body highlighting.
+
+## [0.11.0-b] — 2026-04-16
+### Phase 10-B — Stalled task radar (last AGENT_UPDATE based)
+- stalledTasks() queries last AGENT_UPDATE ChatMessage per task. Returns idleMinutes, progress.
+- Web: severity-colored cards (15m/30m/60m+).
+
+## [0.11.0-a] — 2026-04-16
+### Phase 10-A — Agency Ops dashboard + admin audit log
+- AdminAuditLog model. AdminOpsService: summary, cross-project feed, stalled tasks.
+- ADMIN-only via RolesGuard. All endpoints audit-logged.
+- Web: /admin/ops with summary cards, stalled radar, keyword-filtered feed.
+
+## [0.10.0-d] — 2026-04-16
+### Phase 9-D — Chat task demo scenario
+- "채팅으로 작업 지시" scenario (17s): /task command → agent updates → completion.
+
+## [0.10.0-c] — 2026-04-15
+### Phase 9-C — /task slash command + agent event chat bot
+- Parse `/task @AGENT task_type [REF]`, dispatch via AgentsService, echo result.
+- AgentsService posts AGENT_UPDATE/STATUS on applyUpdate/markComplete.
+
+## [0.10.0-b] — 2026-04-15
+### Phase 9-B — Chat real-time via socket.io gateway
+- ChatGateway: NestJS socket.io /chat namespace, JWT auth, per-project rooms.
+- Web: socket.io-client replaces 5s polling, live/offline badge.
+
+## [0.10.0-a] — 2026-04-15
+### Phase 9-A — Project chat + unified inbox (REST)
+- ChatMessage + ChatReadState models. REST CRUD + inbox aggregation.
+- Web: ChatRoom component, /messages inbox, sidebar "Messages" entry.
+
+---
+
 ## [0.9.0-c] — 2026-04-14
 
 ### Phase 8-C — Public /demo route + mock agent response
