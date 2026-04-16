@@ -14,6 +14,7 @@ import { QaModule } from './qa/qa.module'
 import { ChatModule } from './chat/chat.module'
 import { AdminModule } from './admin/admin.module'
 import { ReleasesModule } from './releases/releases.module'
+import { PortalModule } from './portal/portal.module'
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ReleasesModule } from './releases/releases.module'
     ChatModule,
     AdminModule,
     ReleasesModule,
+    PortalModule,
   ],
 })
 export class AppModule {}

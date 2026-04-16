@@ -11,6 +11,38 @@
 
 ---
 
+## [0.13.0] — 2026-04-16
+
+### Phase 12 — 납품 & 고객 포털 (FR-09)
+
+#### 추가
+- **PortalUser 인증** — `POST /api/auth/portal/login` — 기존
+  `AuthService`에 `portalLogin()` 추가. JWT에 `customerId` 포함.
+
+- **NestJS Portal 모듈** (`apps/api/src/portal/`)
+  - `GET /api/portal/projects` — 고객사(customerId) 소속 프로젝트 목록.
+  - `GET /api/portal/projects/:id/progress` — 진척률(완료/전체 Work Item),
+    Work Item 통계, 최근 배포된 릴리스.
+  - `GET /api/portal/projects/:id/builds` — 성공한 빌드(CloudFront URL).
+  - `GET /api/portal/projects/:id/requirements` — 요구사항 목록.
+  - `POST /api/portal/requirements/:id/approve` — 고객 승인.
+  - `POST /api/portal/requirements/:id/reject` — 고객 반려.
+  - `GET /api/portal/projects/:id/report` — 납품 보고서 JSON
+    (진척 요약, 요구사항, 릴리스, 테스트, 빌드). PDF는 후속.
+  - 모든 엔드포인트에서 `customerId` 기반 접근 제어.
+
+- **고객 포털 웹 UI** (`apps/web/app/(portal)/portal/`)
+  - 로그인 페이지 (`/portal/login`).
+  - 포털 레이아웃 — 상단 헤더(로고 + 로그아웃).
+  - `/portal` — 내 프로젝트 목록 (아이템/요구사항/릴리스 카운트).
+  - `/portal/[id]` — 탭 4개:
+    - **개요** — 진척률 바 + Work Item 통계 + 최근 릴리스.
+    - **요구사항** — 목록 + PENDING_APPROVAL 상태에 승인/반려 버튼.
+    - **빌드 다운로드** — 성공 빌드의 CloudFront 다운로드 링크.
+    - **납품 보고서** — JSON 다운로드 버튼.
+
+---
+
 ## [0.12.0] — 2026-04-16
 
 ### Phase 11 — 빌드 & 배포 관리 (FR-08)

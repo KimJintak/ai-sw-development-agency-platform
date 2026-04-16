@@ -17,6 +17,12 @@ export class AuthController {
     return this.authService.login(dto)
   }
 
+  @Post('portal/login')
+  @ApiOperation({ summary: '고객 포털 로그인' })
+  portalLogin(@Body() dto: LoginDto) {
+    return this.authService.portalLogin(dto)
+  }
+
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh access token' })
   refresh(@Body() dto: RefreshTokenDto) {

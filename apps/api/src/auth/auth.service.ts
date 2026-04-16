@@ -23,6 +23,16 @@ export class AuthService {
     return this.generateTokens(user.id, user.email, user.role)
   }
 
+  async portalLogin(dto: LoginDto) {
+    const user = await this.prisma.portalUser.findUnique({ where: { email: dto.email } })
+    if (!user) throw new UnauthorizedException('Invalid credentials')
+
+    const valid = await bcrypt.compare(dto.password, user.passwordHash)
+    if (!valid) throw new UnauthorizedException('Invalid credentials')
+
+    return this.generateTokens(user.id, user.email, 'PORTAL', user.customerId)
+  }
+
   async refresh(dto: RefreshTokenDto) {
     try {
       const payload = this.jwt.verify(dto.refreshToken, {
@@ -36,8 +46,9 @@ export class AuthService {
     }
   }
 
-  private generateTokens(sub: string, email: string, role: string) {
-    const payload = { sub, email, role }
+  private generateTokens(sub: string, email: string, role: string, customerId?: string) {
+    const payload: Record<string, string> = { sub, email, role }
+    if (customerId) payload.customerId = customerId
     return {
       accessToken: this.jwt.sign(payload, {
         secret: this.config.get<string>('JWT_SECRET'),
