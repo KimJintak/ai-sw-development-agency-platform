@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ThemeToggle } from '@/components/theme-toggle'
 import {
   LayoutDashboard,
   FolderKanban,
@@ -32,8 +33,14 @@ export function Sidebar() {
 
   return (
     <aside className="w-60 min-h-screen bg-card border-r flex flex-col">
-      <div className="h-16 flex items-center px-6 border-b">
-        <span className="font-bold text-lg text-primary">Agency Platform</span>
+      <div className="h-16 flex items-center justify-between px-4 border-b">
+        <Link href="/dashboard" className="flex items-center gap-2 font-bold text-primary">
+          <span className="h-7 w-7 rounded-md bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-primary-foreground text-xs font-extrabold">
+            AI
+          </span>
+          <span className="text-base">Agency</span>
+        </Link>
+        <ThemeToggle compact />
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
