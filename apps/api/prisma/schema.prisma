@@ -151,8 +151,58 @@ model Project {
   feedback        Feedback[]
   chatMessages    ChatMessage[]
   chatReads       ChatReadState[]
+  documents       ProjectDocument[]
 
   @@map("projects")
+}
+
+enum DocumentCategory {
+  CLIENT
+  INTERNAL
+}
+
+enum DocumentKind {
+  SPEC
+  CONTRACT
+  REFERENCE
+  API_DOC
+  MANUAL
+  DEPLOY_GUIDE
+  OTHER
+}
+
+model ProjectDocument {
+  id         String           @id @default(cuid())
+  projectId  String           @map("project_id")
+  title      String
+  category   DocumentCategory
+  kind       DocumentKind     @default(OTHER)
+  body       String           @db.Text
+  createdById String?         @map("created_by_id")
+  createdBy  String?          @map("created_by")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  project     Project                     @relation(fields: [projectId], references: [id])
+  attachments ProjectDocumentAttachment[]
+
+  @@index([projectId, category])
+  @@map("project_documents")
+}
+
+model ProjectDocumentAttachment {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  filename   String
+  mimeType   String   @map("mime_type")
+  sizeBytes  Int      @map("size_bytes")
+  dataUrl    String   @map("data_url") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  document ProjectDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, createdAt])
+  @@map("project_document_attachments")
 }
 
 enum ProjectStatus {
