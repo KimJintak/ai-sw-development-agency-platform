@@ -11,7 +11,7 @@ const options: { value: Theme; icon: React.ReactNode; label: string }[] = [
 ]
 
 export function ThemeToggle({ compact }: { compact?: boolean }) {
-  const { theme, setTheme } = useTheme()
+  const { theme, resolved, setTheme, toggle } = useTheme()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
@@ -20,14 +20,14 @@ export function ThemeToggle({ compact }: { compact?: boolean }) {
   }
 
   if (compact) {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark'
+    const next: Theme = resolved === 'dark' ? 'light' : 'dark'
     return (
       <button
-        onClick={() => setTheme(next)}
+        onClick={toggle}
         title={`Switch to ${next} mode`}
         className="h-8 w-8 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
       >
-        {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+        {resolved === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
       </button>
     )
   }
