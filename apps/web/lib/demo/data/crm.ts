@@ -1,0 +1,93 @@
+const now = Date.now()
+
+export const demoCustomers = [
+  {
+    id: 'demo-cust-001',
+    companyName: '넥스트랩 주식회사',
+    contactName: '김태현',
+    email: 'taehyun@nextlab.kr',
+    phone: '02-1234-5678',
+    createdAt: new Date(now - 90 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-cust-002',
+    companyName: '클라우드픽 Inc.',
+    contactName: '박지민',
+    email: 'jimin@cloudpick.io',
+    phone: '02-9876-5432',
+    createdAt: new Date(now - 60 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-cust-003',
+    companyName: '메디소프트',
+    contactName: '이수진',
+    email: 'sujin@medisoft.co.kr',
+    phone: '031-555-0100',
+    createdAt: new Date(now - 120 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-cust-004',
+    companyName: 'FinCore Technologies',
+    contactName: 'David Park',
+    email: 'david@fincore.com',
+    phone: null,
+    createdAt: new Date(now - 180 * 86400000).toISOString(),
+  },
+]
+
+export const demoOpportunities = [
+  {
+    id: 'demo-opp-001',
+    title: '넥스트랩 모바일 앱 2차 개발',
+    customerId: 'demo-cust-001',
+    stage: 'NEGOTIATION',
+    estimatedValue: 85000000,
+    notes: 'SwiftBoard 후속 프로젝트. Android 버전 추가 개발.',
+    createdAt: new Date(now - 10 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-opp-002',
+    title: '클라우드픽 엔터프라이즈 라이선스',
+    customerId: 'demo-cust-002',
+    stage: 'CONTRACT',
+    estimatedValue: 120000000,
+    notes: 'CloudSync 엔터프라이즈 버전. 500인 이상 라이선스.',
+    createdAt: new Date(now - 20 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-opp-003',
+    title: 'AI 챗봇 PoC',
+    customerId: 'demo-cust-001',
+    stage: 'LEAD',
+    estimatedValue: 30000000,
+    notes: '고객 문의 자동응답 챗봇 개발 가능성 검토.',
+    createdAt: new Date(now - 3 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-opp-004',
+    title: 'MediTrack Phase 2',
+    customerId: 'demo-cust-003',
+    stage: 'LEAD',
+    estimatedValue: 65000000,
+    notes: '원격 진료 기능 추가. Phase 1 완료 후 진행.',
+    createdAt: new Date(now - 5 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-opp-005',
+    title: 'FinCore 대시보드 유지보수',
+    customerId: 'demo-cust-004',
+    stage: 'COMPLETED',
+    estimatedValue: 24000000,
+    notes: '연간 유지보수 계약. 월 200만원.',
+    createdAt: new Date(now - 60 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-opp-006',
+    title: '메디소프트 EHR 연동',
+    customerId: 'demo-cust-003',
+    stage: 'LOST',
+    estimatedValue: 45000000,
+    notes: '경쟁사 수주. 가격 차이.',
+    createdAt: new Date(now - 30 * 86400000).toISOString(),
+  },
+]

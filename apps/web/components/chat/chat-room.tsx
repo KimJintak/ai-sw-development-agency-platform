@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import apiClient from '@/lib/api-client'
 import { Send, Bot, User as UserIcon, Settings2, Wifi, WifiOff } from 'lucide-react'
+import { useDemoMode } from '@/lib/demo/demo-context'
 
 type AuthorType = 'USER' | 'AGENT' | 'SYSTEM'
 type MessageKind = 'TEXT' | 'STATUS' | 'COMMAND' | 'AGENT_UPDATE'
@@ -28,6 +29,7 @@ export function ChatRoom({ projectId }: { projectId: string }) {
   const [connected, setConnected] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<Socket | null>(null)
+  const { isDemoMode } = useDemoMode()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -43,7 +45,17 @@ export function ChatRoom({ projectId }: { projectId: string }) {
     void load()
   }, [load])
 
+  // In demo mode, skip WebSocket and just show connected
   useEffect(() => {
+    if (isDemoMode) {
+      setConnected(true)
+      return
+    }
+  }, [isDemoMode])
+
+  useEffect(() => {
+    if (isDemoMode) return
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
     if (!token) return
 
@@ -71,7 +83,7 @@ export function ChatRoom({ projectId }: { projectId: string }) {
       socket.disconnect()
       socketRef.current = null
     }
-  }, [projectId])
+  }, [projectId, isDemoMode])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
