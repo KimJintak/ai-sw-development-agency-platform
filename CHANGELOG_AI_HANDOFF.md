@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### API — Feedback: attachments, status history, RBAC
+- FeedbackAttachment model + endpoints (POST/GET/DELETE). 5MB/file, max 5, data-URL based.
+- FeedbackStatusHistory model + `GET /feedback/:id/history`. Records from→to, actor, reason on status change / retriage / auto work-item creation.
+- RolesGuard applied: status change / retriage / attachment delete = ADMIN/PM. Feedback create / attachment add = ADMIN/PM/CLIENT.
+
+### API — Project Documents module
+- New `ProjectDocument` / `ProjectDocumentAttachment` models. Categories: CLIENT / INTERNAL. Kinds: SPEC, CONTRACT, REFERENCE, API_DOC, MANUAL, DEPLOY_GUIDE, OTHER.
+- New NestJS module at `apps/api/src/documents/`. List/read allowed for any authed user; create/update/delete = ADMIN/PM.
+
+### Web — Infrastructure (i18n / auth / demo)
+- i18n system (`apps/web/lib/i18n/`) — ko/en, localStorage-backed, auto-detects browser locale. Type-safe `TranslationKey`.
+- `CurrentUserProvider` (`apps/web/lib/auth/`) — decodes JWT role, `hasRole()` helper for UI-level RBAC.
+- Demo Mode (`apps/web/lib/demo/`) — localStorage toggle; axios request interceptor intercepts GETs and returns `resolveDemoData()` locally. 11 sample data sets (projects/feedback/crm/agents/messages/releases/chat/design/qa/work-items/admin-ops). Chat room skips WebSocket in demo mode.
+- `useTheme` refactor — exposes `resolved` and `toggle()` so compact ThemeToggle transitions correctly when `theme === 'system'`.
+
+### Web — Screens
+- Settings page + manual (`/settings`, `/settings/manual`) — language/theme picker with usage guide.
+- Project documents viewer (`/projects/:id/documents`, `/projects/:id/documents/:docId`) — category tabs, attachment upload/download, ADMIN/PM edit gate.
+- Feedback inbox + detail + attachments — global `/feedback` inbox, reworked `/projects/:id/feedback`, detail page at `/projects/:id/feedback/:fbId` with status history and role-gated actions.
+- Admin layout / Sidebar — wrapped with I18n + CurrentUser + DemoMode providers; sidebar uses TranslationKeys and adds a Demo Mode toggle switch; banner shown at the top when demo is on.
+- Demo Tour page redesigned — added guide section (select scenario → play & speed → timeline jump).
+- CRM title changed to "발주처관리".
+
+### Tooling
+- Added `puppeteer` devDependency + `scripts/screenshots.mjs` for automated screen captures.
+
+### ⚠️ Git history rewrite (heads up for collaborators)
+- The 49 commits ahead of `origin/main` had their author/committer rewritten to `KimJintak <runkorean21@gmail.com>` (not yet pushed).
+- If you had branched off an older commit hash, rebase your branch onto the new `main` via `git rebase --onto main <old-base> <branch>`.
+- A recovery tag `backup-before-author-rewrite` is kept locally.
+
 ---
 
 ## [0.20.0] — 2026-04-16

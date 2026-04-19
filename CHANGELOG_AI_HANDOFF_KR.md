@@ -9,6 +9,81 @@
 
 ## [미출시]
 
+### API — 피드백 확장 (첨부 + 상태 이력 + RBAC)
+
+#### 추가
+- **`FeedbackAttachment`** 모델 + 엔드포인트
+  - `POST /feedback/:id/attachments` — 파일당 5MB, 최대 5개, data URL 기반.
+  - `GET /feedback/attachments/:attId` — 원본 바이너리 스트리밍 다운로드.
+  - `DELETE /feedback/attachments/:attId` — ADMIN/PM 전용.
+- **`FeedbackStatusHistory`** 모델 + `GET /feedback/:id/history`
+  - 상태 변경·재분류·Work Item 자동 생성 시 `from → to` + 이유 + 변경 주체 기록.
+- **RBAC 강화** — `RolesGuard` 적용. 상태 변경·재분류·첨부 삭제는 ADMIN/PM,
+  피드백 제출·첨부 추가는 ADMIN/PM/CLIENT.
+
+### API — 프로젝트 문서 모듈
+
+#### 추가
+- **`ProjectDocument` / `ProjectDocumentAttachment`** 모델
+  - 카테고리 `CLIENT` / `INTERNAL`, 종류 `SPEC`·`CONTRACT`·`REFERENCE`·
+    `API_DOC`·`MANUAL`·`DEPLOY_GUIDE`·`OTHER`.
+- **Documents NestJS 모듈** (`apps/api/src/documents/`)
+  - `GET /projects/:projectId/documents?category=` — 목록.
+  - `POST/PATCH/DELETE` 및 첨부 CRUD는 ADMIN/PM 전용, 조회는 인증 사용자.
+
+### Web — 인프라 (i18n / auth / demo)
+
+#### 추가
+- **i18n 시스템** (`apps/web/lib/i18n/`) — ko/en, `localStorage`에 저장,
+  브라우저 언어 자동 감지. `useI18n()` + `TranslationKey` 타입 안전 번역.
+- **`CurrentUserProvider`** (`apps/web/lib/auth/`) — JWT에서 role 디코드,
+  `hasRole()` 헬퍼로 UI 레벨 권한 분기.
+- **Demo Mode** (`apps/web/lib/demo/`)
+  - `DemoModeProvider` — localStorage 토글.
+  - `apiClient` 요청 인터셉터에서 GET을 가로채 `resolveDemoData()` 결과를
+    로컬 응답으로 반환 (쓰기는 실패 허용).
+  - 11종 샘플 데이터 세트: projects·feedback·crm·agents·messages·releases·
+    chat·design·qa·work-items·admin-ops.
+  - 채팅방은 demo 모드에서 WebSocket 연결을 건너뛰고 "connected" 표시.
+
+#### 변경
+- **`useTheme`** — `resolved` 값과 `toggle()` 헬퍼 노출. compact
+  ThemeToggle이 `system` 선택 시에도 올바른 다음 테마로 전환.
+
+### Web — 화면
+
+#### 추가
+- **Settings 페이지 + 매뉴얼** (`/settings`, `/settings/manual`) — 언어/테마
+  선택 + 사용법 안내.
+- **프로젝트 문서 뷰어** (`/projects/:id/documents`, `/projects/:id/documents/:docId`)
+  — 카테고리 탭, 첨부 업/다운로드, ADMIN/PM만 편집.
+- **Feedback 목록/상세/첨부 UI**
+  - 전역 인박스 `/feedback`.
+  - 프로젝트별 목록 `/projects/:id/feedback` 개편.
+  - 상세 `/projects/:id/feedback/:fbId` — 첨부 업/다운, 상태 변경 이력,
+    역할별 UI 분기 (CLIENT는 제출만, ADMIN/PM만 상태 변경·재분류·첨부 삭제).
+
+#### 변경
+- **Admin layout / Sidebar** — `I18nProvider` + `CurrentUserProvider` +
+  `DemoModeProvider`로 래핑. 사이드바 메뉴 전체를 `TranslationKey` 기반으로
+  전환하고 Demo Mode 토글 스위치 추가. demo 활성 시 상단 배너 노출.
+- **Demo Tour 페이지** — 시나리오 선택 → 재생/속도 조절 → 타임라인 이동
+  안내 섹션 추가, 카드 레이아웃 개선.
+- **CRM 타이틀** "발주처관리"로 변경.
+
+### 개발
+
+#### 추가
+- `puppeteer` devDependency + `scripts/screenshots.mjs` — 화면 캡처 자동화.
+
+### ⚠️ Git 이력 재작성 (협업자 주의)
+
+- `origin/main`보다 앞서 있던 **49 커밋의 author/committer를
+  `KimJintak <runkorean21@gmail.com>`으로 재작성**했습니다 (아직 push 전).
+- 다른 작업자가 이전 커밋 해시 기준으로 브랜치를 파놨다면 `main` 최신화 후
+  해당 브랜치를 `git rebase --onto main <old-base> <branch>`로 옮겨야 합니다.
+- 복구용 백업 태그 `backup-before-author-rewrite`가 로컬에 남아 있습니다.
+
 ---
 
 ## [0.20.0] — 2026-04-16
