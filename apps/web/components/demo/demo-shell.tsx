@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/sidebar'
+import { DemoModeProvider } from '@/lib/demo/demo-context'
+import { I18nProvider } from '@/lib/i18n/i18n-context'
+import { CurrentUserProvider } from '@/lib/auth/current-user-context'
 import { PlayCircle, LogIn } from 'lucide-react'
 
 export function DemoShell({ children }: { children: React.ReactNode }) {
@@ -18,12 +21,18 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
 
   if (authed) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">{children}</div>
-        </main>
-      </div>
+      <I18nProvider>
+        <CurrentUserProvider>
+          <DemoModeProvider>
+            <div className="flex min-h-screen bg-background">
+              <Sidebar />
+              <main className="flex-1 overflow-auto">
+                <div className="p-6">{children}</div>
+              </main>
+            </div>
+          </DemoModeProvider>
+        </CurrentUserProvider>
+      </I18nProvider>
     )
   }
 

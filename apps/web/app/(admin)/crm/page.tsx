@@ -20,7 +20,7 @@ export default function CrmPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">CRM</h1>
+      <h1 className="text-2xl font-bold">발주처관리</h1>
 
       <div className="flex gap-2 border-b">
         {(['customers', 'pipeline'] as const).map((t) => (
