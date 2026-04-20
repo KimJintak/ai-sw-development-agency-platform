@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### LLM provider abstraction — no vendor lock-in (API + Agents)
+- New `LlmModule` / `LlmService` at `apps/api/src/llm/` built on `ai` + `@ai-sdk/*`. `modelFor(task)` reads `LLM_MODEL_<TASK>` and routes to `anthropic` / `openai` / `google` / `openrouter`. OpenRouter is supported via OpenAI-compatible baseURL override (one key → all models). `hasAnyLlmKey()` gates dry-run fallbacks.
+- New `agents/base/src/llm.ts` — the same helper for agents (`modelFor`, `modelIdFor`, `hasAnyLlmKey`, re-exports `generateText` / `streamText`). Any agent that imports from `agent-base` can switch providers via env vars alone.
+- `.env.example` adds `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `OPENROUTER_API_KEY`, plus per-task keys `LLM_MODEL_DEFAULT` / `LLM_MODEL_PM` / `LLM_MODEL_TRIAGE` / `LLM_MODEL_SUMMARIZE` / `LLM_MODEL_CODE` / `LLM_MODEL_TEST`.
+- `pm-agent.service.ts`: `Anthropic.messages.create()` → `generateText(...)`. `ANTHROPIC_API_KEY` hard dependency removed; `LlmService` injected via DI.
+- `mac-agent/task-handler.ts`: same migration. `code_generation` uses `LLM_MODEL_CODE`, `test_generation` uses `LLM_MODEL_TEST`.
+- Dependencies: dropped `@anthropic-ai/sdk` from `apps/api`, `agents/base`, `agents/mac-agent`. Added `ai`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`.
+
 ### API — Feedback: attachments, status history, RBAC
 - FeedbackAttachment model + endpoints (POST/GET/DELETE). 5MB/file, max 5, data-URL based.
 - FeedbackStatusHistory model + `GET /feedback/:id/history`. Records from→to, actor, reason on status change / retriage / auto work-item creation.

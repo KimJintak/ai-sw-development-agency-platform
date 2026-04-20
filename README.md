@@ -115,10 +115,30 @@ cd apps/orchestrator && mix phx.server
 
 ### 환경 변수
 
-`.env.example`에 43개 키(DATABASE_URL, REDIS_URL, JWT_*, ANTHROPIC_API_KEY,
+`.env.example`에 주요 키(DATABASE_URL, REDIS_URL, JWT_*, 각 LLM 프로바이더,
 AWS_*, GITHUB_TOKEN, FIGMA_ACCESS_TOKEN 등)가 정의되어 있습니다. 각 앱은
-루트 `.env`를 공유합니다. `ANTHROPIC_API_KEY` 미설정 시 PM Agent 등 일부
-서비스는 **dry-run 모드**(템플릿 응답)로 동작합니다.
+루트 `.env`를 공유합니다. LLM 프로바이더 키가 하나도 없으면 PM Agent 등
+LLM 기반 서비스는 **dry-run 모드**(템플릿 응답)로 동작합니다.
+
+### LLM 프로바이더 (벤더 락인 방지)
+
+PM Agent · mac-agent 등 AI 호출은 `ai` + `@ai-sdk/*` 기반 추상 계층
+(`apps/api/src/llm/`, `agents/base/src/llm.ts`)을 통해 실행됩니다.
+`<provider>:<modelId>` 형식으로 태스크별 모델을 지정합니다.
+
+```
+LLM_MODEL_DEFAULT="anthropic:claude-sonnet-4-5"
+LLM_MODEL_PM="anthropic:claude-sonnet-4-5"         # 긴 문맥·Gherkin
+LLM_MODEL_TRIAGE="openai:gpt-4o-mini"              # 빠르고 저렴
+LLM_MODEL_SUMMARIZE="google:gemini-2.0-flash"
+LLM_MODEL_CODE="anthropic:claude-sonnet-4-5"
+LLM_MODEL_TEST="openai:gpt-4o-mini"
+```
+
+지원 프로바이더: `anthropic` · `openai` · `google` · `openrouter`
+(OpenRouter는 단일 키로 모든 모델을 사용할 수 있는 게이트웨이).
+여러 키를 동시에 세팅하면 태스크마다 서로 다른 프로바이더를 자유롭게 선택할
+수 있습니다.
 
 ### Demo Mode
 
@@ -252,10 +272,29 @@ cd apps/orchestrator && mix phx.server
 
 ### Environment
 
-`.env.example` declares 43 keys (`DATABASE_URL`, `REDIS_URL`, `JWT_*`,
-`ANTHROPIC_API_KEY`, `AWS_*`, `GITHUB_TOKEN`, `FIGMA_ACCESS_TOKEN`, ...). All
-apps share the root `.env`. When `ANTHROPIC_API_KEY` is missing, services like
-the PM Agent fall back to **dry-run mode** (template responses).
+`.env.example` declares the main keys (`DATABASE_URL`, `REDIS_URL`, `JWT_*`,
+per-provider LLM keys, `AWS_*`, `GITHUB_TOKEN`, `FIGMA_ACCESS_TOKEN`, ...). All
+apps share the root `.env`. When no LLM provider key is set, services like the
+PM Agent fall back to **dry-run mode** (template responses).
+
+### LLM providers (no vendor lock-in)
+
+AI calls (PM Agent, mac-agent, …) go through an abstraction layer
+(`apps/api/src/llm/`, `agents/base/src/llm.ts`) built on `ai` + `@ai-sdk/*`.
+Models are selected per task via `<provider>:<modelId>`:
+
+```
+LLM_MODEL_DEFAULT="anthropic:claude-sonnet-4-5"
+LLM_MODEL_PM="anthropic:claude-sonnet-4-5"         # long context · Gherkin
+LLM_MODEL_TRIAGE="openai:gpt-4o-mini"              # cheap + fast
+LLM_MODEL_SUMMARIZE="google:gemini-2.0-flash"
+LLM_MODEL_CODE="anthropic:claude-sonnet-4-5"
+LLM_MODEL_TEST="openai:gpt-4o-mini"
+```
+
+Supported providers: `anthropic` · `openai` · `google` · `openrouter`
+(OpenRouter is a gateway — one key for all models). Mix and match freely per
+task.
 
 ### Demo Mode
 

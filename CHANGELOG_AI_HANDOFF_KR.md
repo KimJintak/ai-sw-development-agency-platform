@@ -9,6 +9,35 @@
 
 ## [미출시]
 
+### LLM 프로바이더 추상화 — 벤더 락인 방지 (API + Agents)
+
+#### 추가
+- **`LlmModule` / `LlmService`** (`apps/api/src/llm/`) — `ai` + `@ai-sdk/*`
+  기반 프로바이더 추상화. `modelFor(task)`가 `LLM_MODEL_<TASK>` 환경변수를
+  읽어 `anthropic` / `openai` / `google` / `openrouter` 중 하나로 라우팅.
+  OpenRouter는 OpenAI 호환 baseURL override로 단일 키 게이트웨이 지원.
+  `hasAnyLlmKey()`로 어떤 프로바이더 키도 없을 때 dry-run 분기.
+- **`agents/base/src/llm.ts`** — 에이전트용 동일 헬퍼
+  (`modelFor`·`modelIdFor`·`hasAnyLlmKey` + `generateText`·`streamText`
+  재수출). 모든 에이전트는 `agent-base`만 import하면 환경변수로 프로바이더를
+  바꿀 수 있음.
+- **`.env.example`** — `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`,
+  `OPENROUTER_API_KEY` 및 `LLM_MODEL_DEFAULT` / `LLM_MODEL_PM` /
+  `LLM_MODEL_TRIAGE` / `LLM_MODEL_SUMMARIZE` / `LLM_MODEL_CODE` /
+  `LLM_MODEL_TEST` 키 신설.
+
+#### 변경
+- **`pm-agent.service.ts`** — `Anthropic.messages.create()` → `generateText()`
+  로 교체. `ANTHROPIC_API_KEY` 하드 의존 제거, DI로 `LlmService` 주입.
+- **`mac-agent/task-handler.ts`** — 동일 방식 교체. code/test 태스크에
+  각각 `LLM_MODEL_CODE` / `LLM_MODEL_TEST` 사용.
+
+#### 의존성
+- `apps/api` · `agents/base`: `@anthropic-ai/sdk` 제거, `ai`·`@ai-sdk/anthropic`·
+  `@ai-sdk/openai`·`@ai-sdk/google` 추가 (`agents/mac-agent`도 직접 의존 제거).
+
+---
+
 ### API — 피드백 확장 (첨부 + 상태 이력 + RBAC)
 
 #### 추가
