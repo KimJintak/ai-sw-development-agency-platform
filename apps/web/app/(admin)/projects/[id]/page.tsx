@@ -13,6 +13,7 @@ import {
   MessagesSquare,
   Rocket,
   Files,
+  GitPullRequest,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import type { Project, WorkItem } from 'shared-types'
@@ -110,6 +111,16 @@ const TONES: Record<string, TabTone> = {
     idleHover: 'hover:bg-teal-500/10 hover:text-teal-700 dark:hover:text-teal-300',
     bar: 'bg-teal-500',
   },
+  fuchsia: {
+    accent: 'text-fuchsia-600 dark:text-fuchsia-400',
+    activeBg: 'bg-fuchsia-50 dark:bg-fuchsia-500/10',
+    activeText: 'text-fuchsia-700 dark:text-fuchsia-300',
+    activeBorder: 'border-fuchsia-300 dark:border-fuchsia-500/40',
+    idleText: 'text-fuchsia-700/60 dark:text-fuchsia-400/50',
+    idleBg: 'bg-fuchsia-500/5',
+    idleHover: 'hover:bg-fuchsia-500/10 hover:text-fuchsia-700 dark:hover:text-fuchsia-300',
+    bar: 'bg-fuchsia-500',
+  },
 }
 
 const SUB_NAV: { label: string; href: string; icon: typeof Kanban; tone: keyof typeof TONES }[] = [
@@ -120,6 +131,7 @@ const SUB_NAV: { label: string; href: string; icon: typeof Kanban; tone: keyof t
   { label: 'Chat', href: '/chat', icon: MessagesSquare, tone: 'sky' },
   { label: 'Feedback', href: '/feedback', icon: Inbox, tone: 'rose' },
   { label: 'Documents', href: '/documents', icon: Files, tone: 'teal' },
+  { label: 'Source', href: '/source', icon: GitPullRequest, tone: 'fuchsia' },
   { label: 'Releases', href: '/releases', icon: Rocket, tone: 'indigo' },
 ]
 
