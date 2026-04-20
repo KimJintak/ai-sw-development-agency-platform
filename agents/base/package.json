@@ -8,11 +8,14 @@
     "lint": "eslint src/**/*.ts"
   },
   "dependencies": {
-    "ioredis": "^5.4.1",
+    "@ai-sdk/anthropic": "^3.0.71",
+    "@ai-sdk/google": "^3.0.64",
+    "@ai-sdk/openai": "^3.0.53",
+    "ai": "^6.0.168",
     "axios": "^1.7.9",
-    "ws": "^8.18.0",
-    "@anthropic-ai/sdk": "^0.36.2",
-    "shared-types": "workspace:*"
+    "ioredis": "^5.4.1",
+    "shared-types": "workspace:*",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

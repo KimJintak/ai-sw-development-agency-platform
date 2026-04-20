@@ -11,9 +11,8 @@
   },
   "dependencies": {
     "agent-base": "workspace:*",
-    "shared-types": "workspace:*",
-    "@anthropic-ai/sdk": "^0.36.2",
-    "axios": "^1.7.9"
+    "axios": "^1.7.9",
+    "shared-types": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

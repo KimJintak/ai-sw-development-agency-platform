@@ -1,16 +1,16 @@
-import Anthropic from '@anthropic-ai/sdk'
-import type { TaskPayload, TaskResult } from 'agent-base'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-})
-
-const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514'
+import {
+  generateText,
+  hasAnyLlmKey,
+  modelFor,
+  modelIdFor,
+  type TaskPayload,
+  type TaskResult,
+} from 'agent-base'
 
 /**
  * Mac Dev Agent task handler.
- * Receives a task from the Orchestrator, uses Claude to generate code,
- * and returns the result.
+ * Receives a task from the Orchestrator, uses the configured LLM to generate
+ * code, and returns the result.
  */
 export async function handleTask(task: TaskPayload): Promise<TaskResult> {
   const { task_type, payload } = task
@@ -32,7 +32,6 @@ export async function handleTask(task: TaskPayload): Promise<TaskResult> {
         return await handleBuild(task)
 
       default:
-        // Default: treat as a code generation task
         return await handleCodeTask(task)
     }
   } catch (err: any) {
@@ -44,40 +43,36 @@ async function handleCodeTask(task: TaskPayload): Promise<TaskResult> {
   const p = task.payload
   const prompt = buildCodePrompt(p)
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    // Dry-run mode when no API key is set
-    console.log('[task-handler] No ANTHROPIC_API_KEY set — running in dry-run mode')
+  if (!hasAnyLlmKey()) {
+    console.log('[task-handler] No LLM provider key set — running in dry-run mode')
     return {
       status: 'completed',
       result: {
         mode: 'dry-run',
         prompt_preview: prompt.slice(0, 500),
-        message: 'Claude API key not configured. Set ANTHROPIC_API_KEY to enable AI code generation.',
+        message:
+          'No LLM provider key configured. Set ANTHROPIC_API_KEY / OPENAI_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY / OPENROUTER_API_KEY to enable AI code generation.',
       },
     }
   }
 
-  console.log('[task-handler] Calling Claude API...')
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
+  const modelId = modelIdFor('code')
+  console.log(`[task-handler] Calling LLM (${modelId}) ...`)
+  const { text, usage } = await generateText({
+    model: modelFor('code'),
     system: buildSystemPrompt(task),
+    prompt,
+    maxOutputTokens: 4096,
   })
-
-  const content = response.content
-    .filter((b) => b.type === 'text')
-    .map((b) => (b as { type: 'text'; text: string }).text)
-    .join('\n')
 
   return {
     status: 'completed',
     result: {
-      generated_code: content,
-      model: MODEL,
+      generated_code: text,
+      model: modelId,
       usage: {
-        input_tokens: response.usage.input_tokens,
-        output_tokens: response.usage.output_tokens,
+        input_tokens: usage.inputTokens ?? 0,
+        output_tokens: usage.outputTokens ?? 0,
       },
     },
   }
@@ -87,34 +82,29 @@ async function handleTestGeneration(task: TaskPayload): Promise<TaskResult> {
   const p = task.payload
   const prompt = `Generate test cases for the following:\n\nTitle: ${p.title || 'Unknown'}\nDescription: ${p.description || ''}\nPlatform: ${p.platform || 'macOS/iOS'}\nLanguage: ${p.language || 'Swift'}\n\nWrite comprehensive unit tests using XCTest framework.`
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!hasAnyLlmKey()) {
     return {
       status: 'completed',
       result: { mode: 'dry-run', prompt_preview: prompt.slice(0, 300) },
     }
   }
 
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
+  const modelId = modelIdFor('test')
+  const { text } = await generateText({
+    model: modelFor('test'),
     system: 'You are an expert iOS/macOS test engineer. Generate comprehensive XCTest test cases.',
+    prompt,
+    maxOutputTokens: 4096,
   })
-
-  const content = response.content
-    .filter((b) => b.type === 'text')
-    .map((b) => (b as { type: 'text'; text: string }).text)
-    .join('\n')
 
   return {
     status: 'completed',
-    result: { generated_tests: content, model: MODEL },
+    result: { generated_tests: text, model: modelId },
   }
 }
 
 async function handleBuild(task: TaskPayload): Promise<TaskResult> {
   const p = task.payload
-  // In production, this would invoke xcodebuild / flutter build
   console.log(`[task-handler] Build requested for: ${p.target || 'iOS'}`)
 
   return {
