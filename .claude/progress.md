@@ -156,3 +156,14 @@ Recent commits:
 - 64ab1a7 chore(progress): auto log from ip-172-31-47-35
 
 Uncommitted:  3 files changed, 72 insertions(+), 70 deletions(-)
+
+## 2026-04-20T04:14:27Z · ip-172-31-47-35 · main
+
+Recent commits:
+- d68d6a2 feat(orchestrator): TaskCallback 재시도 outbox — API 장애 시에도 이벤트 유실 방지
+- e2a9a57 feat(agents): correlation_id 전 구간 전파 — API ↔ Orchestrator ↔ Agent
+- 9e23517 fix(agents): AGENT_ENDPOINT 포트 정정 + 재접속 지수 백오프
+- a15839d chore(progress): auto log from ip-172-31-47-35
+- 5544c49 chore(progress): auto log from ip-172-31-47-35
+
+Uncommitted:  3 files changed, 85 insertions(+), 77 deletions(-)
