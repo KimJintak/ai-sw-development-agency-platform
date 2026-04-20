@@ -200,3 +200,14 @@ Recent commits:
 - d68d6a2 feat(orchestrator): TaskCallback 재시도 outbox — API 장애 시에도 이벤트 유실 방지
 
 Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
+
+## 2026-04-20T05:45:00Z · ip-172-31-47-35 · main
+
+Recent commits:
+- c0e5115 feat(api,web): Phase 21 — external link hub on project page
+- 2e90417 chore(progress): auto log from ip-172-31-47-35
+- 40a8595 chore(progress): auto log from ip-172-31-47-35
+- acea1ba chore(progress): auto log from ip-172-31-47-35
+- c535915 fix(web): demo SCM 'GitHub 열기' button no longer 404s
+
+Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
