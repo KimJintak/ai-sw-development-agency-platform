@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Agent communication — reliability + observability
+- Callback Outbox (`apps/orchestrator/lib/orchestrator/callback_outbox.ex`, `.../callback_outbox/worker.ex`, migration `20260420030000_create_callback_outbox`) — replaces the fire-and-forget `Req.post` in `TaskCallback` with an Ecto persistent outbox. Worker drains `pending` rows with exponential backoff (5s · 10s · 20s · … up to 640s + jitter) up to 8 attempts, then marks `dead`. API downtime no longer drops agent events.
+- End-to-end `correlation_id` — threaded through NestJS `agents.service` → Redis → Orchestrator (`RedisConsumer` → `TaskDispatcher` → `AgentChannel`) → `agent-client` → callbacks (`X-Correlation-Id` header + body field). Makes multi-agent flows greppable across logs.
+- Exponential backoff on agent reconnect (`agent-client.ts`): hard 5s retry → 1s→60s with jitter, resets on successful channel join.
+- `.env.example` `AGENT_ENDPOINT` corrected from the non-existent `:4002/a2a` to the real Phoenix Channel endpoint `ws://localhost:4001/socket/websocket`.
+
+Operational note: deploying the Orchestrator requires running `mix ecto.migrate` so the `callback_outbox` table is created.
+
+---
+
 ### Cross-device sync — Claude Code hooks + shared settings
 - New `CLAUDE.md` at repo root — baseline context auto-loaded by every Claude Code session on every device. Covers command cheatsheet, LLM routing rules, git conventions, cross-device workflow, and known gotchas.
 - New `.claude/settings.json` (git-tracked) — shared permission allow-list and `Stop` / `SessionStart` hooks. All devices get the same setup.

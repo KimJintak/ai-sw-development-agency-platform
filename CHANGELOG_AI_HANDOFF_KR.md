@@ -9,6 +9,33 @@
 
 ## [미출시]
 
+### 에이전트 통신 — 신뢰성·관찰성 보강
+
+#### 추가
+- **Callback Outbox** (`apps/orchestrator/lib/orchestrator/callback_outbox.ex`,
+  `.../callback_outbox/worker.ex`, 마이그레이션 `20260420030000_create_callback_outbox`)
+  — 기존 `TaskCallback` 의 fire-and-forget `Req.post` 를 Ecto persistent
+  outbox로 교체. Worker가 `pending` 레코드를 주기적으로 드레인하고 지수
+  백오프(5s·10s·20s·…·최대 640s + jitter)로 재시도. 최대 8회 초과 시
+  `dead` 로 전환해 수동 조사 대상으로 남김. API 일시 장애 시 이벤트 유실
+  방지.
+- **correlation_id 전 구간 전파** (TaskPayload·TaskUpdateDto·TaskCompleteDto
+  에 필드 추가) — `NestJS agents.service` → Redis → `Orchestrator
+  RedisConsumer/TaskDispatcher/AgentChannel` → `agent-client` → 역방향
+  (`TaskCallback` → `X-Correlation-Id` 헤더 + body) 모두에 동일 cid 태움.
+  멀티 에이전트 시나리오 로그 grep 가능.
+
+#### 변경
+- `agent-client.ts` 재접속 지연: 고정 5초 → 지수 백오프 1s→60s + jitter,
+  성공 join 시 attempts 리셋.
+- `.env.example` `AGENT_ENDPOINT` 좀비 값(`:4002/a2a`) → 실제 Phoenix
+  Channel 경로(`ws://localhost:4001/socket/websocket`).
+
+#### 운영 주의
+- Orchestrator 배포 시 **`mix ecto.migrate` 실행 필수** (outbox 테이블 생성).
+
+---
+
 ### 크로스디바이스 sync — Claude Code 훅 + 공유 설정
 
 #### 추가

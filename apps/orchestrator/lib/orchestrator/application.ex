@@ -54,6 +54,10 @@ defmodule Orchestrator.Application do
          {Application.get_env(:orchestrator, :redis_url, "redis://localhost:6379"),
           [name: :redix]}},
         Orchestrator.RedisConsumer,
+        # Callback outbox worker — persists agent events and drains
+        # `callback_outbox` rows with exponential backoff so API downtime
+        # doesn't cause data loss.
+        Orchestrator.CallbackOutbox.Worker,
         OrchestratorWeb.Endpoint
       ]
     else
