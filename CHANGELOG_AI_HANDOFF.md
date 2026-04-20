@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Cross-device sync — Claude Code hooks + shared settings
+- New `CLAUDE.md` at repo root — baseline context auto-loaded by every Claude Code session on every device. Covers command cheatsheet, LLM routing rules, git conventions, cross-device workflow, and known gotchas.
+- New `.claude/settings.json` (git-tracked) — shared permission allow-list and `Stop` / `SessionStart` hooks. All devices get the same setup.
+- New `.claude/hooks/stop.sh` — appends timestamp · hostname · branch · last 5 commits · uncommitted stats to `.claude/progress.md` after each session. Stages the file (`git add`) but does not commit/push; user decides when.
+- New `.claude/hooks/session-start.sh` — prints the last 40 lines of `progress.md` at session start and warns about ahead/behind vs. upstream.
+- New `.claude/progress.md` — shared activity log, auto-appended by the hook.
+- `.gitignore` now excludes only `.claude/settings.local.json` (personal overrides), so the shared settings propagate.
+
+Effect: rotating across AWS EC2 / Mac mini / Windows / local, switching devices now shows the latest progress automatically. `git pull` → work → end session (hook writes progress) → `git commit && git push`. Session transcripts stay per-device, but "where I left off" is fully shared.
+
+---
+
 ### LLM providers — AWS Bedrock added
 - New `bedrock:` provider in `apps/api/src/llm/llm.service.ts`, `agents/base/src/llm.ts`, and the smoke-test script. Uses the AWS credential chain (`AWS_ACCESS_KEY_ID` / `AWS_PROFILE` / IAM role + `AWS_REGION`), so **Claude can be called with no separate Anthropic API key**. Example: `LLM_MODEL_DEFAULT="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0"`.
 - `hasAnyKey()` / `hasAnyLlmKey()` now also accept `AWS_ACCESS_KEY_ID` / `AWS_PROFILE` as valid — AWS credentials alone disable dry-run.

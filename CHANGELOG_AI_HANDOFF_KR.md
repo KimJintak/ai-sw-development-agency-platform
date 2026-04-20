@@ -9,6 +9,30 @@
 
 ## [미출시]
 
+### 크로스디바이스 sync — Claude Code 훅 + 공유 설정
+
+#### 추가
+- **`CLAUDE.md`** (루트) — 모든 디바이스의 Claude Code 세션이 자동 로드할
+  기준 문서. 명령 치트시트·LLM 라우팅 규칙·git 규약·크로스디바이스 워크플로·
+  알려진 gotcha 포함.
+- **`.claude/settings.json`** (git tracked) — 공유 권한 목록 + `Stop` /
+  `SessionStart` 훅 정의. 모든 디바이스가 같은 설정을 가짐.
+- **`.claude/hooks/stop.sh`** — 세션 종료마다 `.claude/progress.md`에
+  타임스탬프 · hostname · 브랜치 · 최근 5개 커밋 · uncommitted stats 자동
+  추가. `git add`까지만 하고 commit/push는 사용자 판단.
+- **`.claude/hooks/session-start.sh`** — 세션 시작 시 `progress.md` 마지막
+  40줄 노출 + 원격과의 ahead/behind 알림.
+- **`.claude/progress.md`** — 디바이스 간 공유 작업 로그 (훅이 자동 누적).
+- `.gitignore` 에 `.claude/settings.local.json` 만 예외 추가 (개인 override).
+
+#### 효과
+- 4개 이상 디바이스(AWS EC2 / Mac mini / Windows / 로컬)를 순환 사용 시:
+  디바이스 전환 → 자동으로 최근 progress가 보임 → `git pull` → 작업 → 종료
+  → 훅이 progress 기록 → 사용자가 commit/push. 세션 자체는 동기화되지 않지만
+  "어디까지 작업했는지"는 완전 공유.
+
+---
+
 ### LLM 프로바이더 — AWS Bedrock 추가
 
 #### 추가
