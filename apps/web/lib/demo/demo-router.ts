@@ -10,6 +10,15 @@ import { demoCustomers, demoOpportunities } from './data/crm'
 import { demoAgentCards, demoAgentTasks } from './data/agents'
 import { demoInboxItems } from './data/messages'
 import { demoOpsSummary, demoStalled, demoWatchKeywords, demoFeed } from './data/admin-ops'
+import { getDemoDocuments, getDemoDocument } from './data/documents'
+import {
+  getDemoRepo,
+  getDemoBranches,
+  getDemoCommits,
+  getDemoPulls,
+  getDemoPullDetail,
+  getDemoCiStatus,
+} from './data/scm'
 
 interface RouteHandler {
   pattern: RegExp
@@ -117,6 +126,26 @@ const routes: RouteHandler[] = [
 
   // CRM Notifications
   { pattern: /^\/api\/crm\/notifications/, handler: () => [] },
+
+  // Documents
+  { pattern: new RegExp(`^/api/projects/${PID}/documents$`), method: 'GET', handler: (m, params) => getDemoDocuments(resolveProjectId(m[1]), params?.category) },
+  { pattern: new RegExp(`^/api/projects/${PID}/documents$`), method: 'POST', handler: () => ({ id: 'demo-doc-new', success: true }) },
+  { pattern: /^\/api\/documents\/([^/]+)$/, method: 'GET', handler: (m) => getDemoDocument(m[1]) ?? getDemoDocuments('demo-proj-001')[0] },
+  { pattern: /^\/api\/documents\/([^/]+)$/, method: 'PATCH', handler: () => ({ success: true }) },
+  { pattern: /^\/api\/documents\/([^/]+)$/, method: 'DELETE', handler: () => ({ success: true }) },
+  { pattern: /^\/api\/documents\/([^/]+)\/attachments$/, method: 'POST', handler: () => ({ success: true, count: 1 }) },
+  { pattern: /^\/api\/documents\/attachments\/([^/]+)$/, method: 'DELETE', handler: () => ({ success: true }) },
+
+  // SCM (Source Control)
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/repo$`), handler: (m) => getDemoRepo(resolveProjectId(m[1])) },
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/branches$`), handler: (m) => getDemoBranches(resolveProjectId(m[1])) },
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/commits$`), handler: (m, params) => getDemoCommits(resolveProjectId(m[1]), params?.branch) },
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/pulls$`), handler: (m, params) => getDemoPulls(resolveProjectId(m[1]), (params?.state as 'open' | 'closed' | 'all') ?? 'open') },
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/pulls/(\\d+)$`), handler: (m) => getDemoPullDetail(resolveProjectId(m[1]), Number(m[2])) },
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/pulls/(\\d+)/review$`), method: 'POST', handler: () => ({ success: true, state: 'APPROVED' }) },
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/pulls/(\\d+)/merge$`), method: 'POST', handler: () => ({ merged: true, sha: 'demo-merged-sha', message: 'Demo merge successful' }) },
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/status/([^/]+)$`), handler: (m) => getDemoCiStatus(resolveProjectId(m[1]), m[2]) },
+  { pattern: new RegExp(`^/api/projects/${PID}/scm/pulls$`), method: 'POST', handler: () => ({ number: 99, htmlUrl: '#', state: 'open', head: 'demo/new-branch', base: 'main' }) },
 ]
 
 export function resolveDemoData(url: string, method: string, params?: Record<string, string>): unknown | null {
