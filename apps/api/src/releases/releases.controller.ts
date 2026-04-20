@@ -96,6 +96,21 @@ export class ReleasesController {
     return this.service.updateBuild(id, body)
   }
 
+  @Post('releases/:id/prs')
+  @ApiOperation({ summary: '릴리스에 PR 번호 연결' })
+  attachPr(@Param('id') id: string, @Body() body: { prNumber: number }) {
+    return this.service.attachPr(id, body.prNumber)
+  }
+
+  @Delete('releases/:id/prs/:prNumber')
+  @ApiOperation({ summary: '릴리스에서 PR 번호 제거' })
+  detachPr(
+    @Param('id') id: string,
+    @Param('prNumber') prNumber: string,
+  ) {
+    return this.service.detachPr(id, Number(prNumber))
+  }
+
   @Post('releases/:id/deploy')
   @ApiOperation({ summary: '배포 파이프라인 실행 (테스트 검증 → 빌드 → S3 → 배포)' })
   deploy(@Param('id') id: string) {

@@ -484,6 +484,7 @@ model Release {
   title       String?
   status      ReleaseStatus @default(DRAFT)
   platforms   Platform[]
+  prNumbers   Int[]         @map("pr_numbers") @default([])
   approvedAt  DateTime?     @map("approved_at")
   deployedAt  DateTime?     @map("deployed_at")
   createdAt   DateTime      @default(now()) @map("created_at")

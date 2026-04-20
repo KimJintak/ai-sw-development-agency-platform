@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, use } from 'react'
+import Link from 'next/link'
 import apiClient from '@/lib/api-client'
 import {
   Package,
@@ -43,6 +44,7 @@ interface Build {
 interface ReleaseDetail extends Omit<Release, '_count'> {
   releaseItems: { workItem: { id: string; title: string; status: string; type: string } }[]
   builds: Build[]
+  prNumbers: number[]
 }
 
 const statusStyle: Record<ReleaseStatus, string> = {
@@ -231,6 +233,15 @@ export default function ReleasesPage({ params }: { params: Promise<{ id: string 
               </div>
             </div>
 
+            <PrLinker
+              projectId={projectId}
+              releaseId={selected.id}
+              prNumbers={selected.prNumbers ?? []}
+              onChange={async () => {
+                await selectRelease(selected.id)
+              }}
+            />
+
             <div className="border rounded-lg bg-card">
               <header className="px-4 py-2.5 border-b text-sm font-medium">
                 Work Items ({selected.releaseItems.length})
@@ -321,5 +332,93 @@ function Btn({
       {icon}
       {loading ? '진행 중...' : label}
     </button>
+  )
+}
+
+function PrLinker({
+  projectId,
+  releaseId,
+  prNumbers,
+  onChange,
+}: {
+  projectId: string
+  releaseId: string
+  prNumbers: number[]
+  onChange: () => void | Promise<void>
+}) {
+  const [input, setInput] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const attach = async () => {
+    const n = Number(input.trim().replace(/^#/, ''))
+    if (!Number.isInteger(n) || n <= 0) return
+    setBusy(true)
+    try {
+      await apiClient.post(`/api/releases/${releaseId}/prs`, { prNumber: n })
+      setInput('')
+      await onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const detach = async (n: number) => {
+    setBusy(true)
+    try {
+      await apiClient.delete(`/api/releases/${releaseId}/prs/${n}`)
+      await onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="border rounded-lg bg-card">
+      <header className="px-4 py-2.5 border-b text-sm font-medium flex items-center justify-between">
+        <span>연결된 PR ({prNumbers.length})</span>
+      </header>
+      <div className="p-3 space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {prNumbers.length === 0 ? (
+            <span className="text-xs text-muted-foreground italic">연결된 PR이 없습니다.</span>
+          ) : (
+            prNumbers.map((n) => (
+              <span
+                key={n}
+                className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300"
+              >
+                <Link href={`/projects/${projectId}/source/pr/${n}`} className="hover:underline">
+                  #{n}
+                </Link>
+                <button
+                  onClick={() => detach(n)}
+                  disabled={busy}
+                  className="opacity-60 hover:opacity-100"
+                  title="연결 해제"
+                >
+                  ×
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && attach()}
+            placeholder="PR 번호 (예: 42)"
+            className="flex-1 px-2 py-1.5 text-sm border rounded bg-background"
+          />
+          <button
+            onClick={attach}
+            disabled={busy || !input.trim()}
+            className="px-3 py-1.5 text-sm bg-violet-600 text-white rounded disabled:opacity-50"
+          >
+            연결
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

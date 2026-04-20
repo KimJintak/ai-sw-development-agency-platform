@@ -107,6 +107,24 @@ export class ReleasesService {
     return this.prisma.build.update({ where: { id: buildId }, data })
   }
 
+  async attachPr(releaseId: string, prNumber: number) {
+    const release = await this.findOne(releaseId)
+    const next = Array.from(new Set([...release.prNumbers, prNumber])).sort((a, b) => a - b)
+    return this.prisma.release.update({
+      where: { id: releaseId },
+      data: { prNumbers: { set: next } },
+    })
+  }
+
+  async detachPr(releaseId: string, prNumber: number) {
+    const release = await this.findOne(releaseId)
+    const next = release.prNumbers.filter((n) => n !== prNumber)
+    return this.prisma.release.update({
+      where: { id: releaseId },
+      data: { prNumbers: { set: next } },
+    })
+  }
+
   async deployHistory(projectId: string) {
     return this.prisma.build.findMany({
       where: { release: { projectId }, status: BuildStatus.SUCCESS },
