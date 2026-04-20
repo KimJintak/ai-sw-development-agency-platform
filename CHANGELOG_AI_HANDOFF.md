@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Cross-device sync — Claude Code hooks + shared settings
 - New `CLAUDE.md` at repo root — baseline context auto-loaded by every Claude Code session on every device. Covers command cheatsheet, LLM routing rules, git conventions, cross-device workflow, and known gotchas.
 - New `.claude/settings.json` (git-tracked) — shared permission allow-list and `Stop` / `SessionStart` hooks. All devices get the same setup.
-- New `.claude/hooks/stop.sh` — appends timestamp · hostname · branch · last 5 commits · uncommitted stats to `.claude/progress.md` after each session. Stages the file (`git add`) but does not commit/push; user decides when.
+- New `.claude/hooks/stop.sh` — appends timestamp · hostname · branch · last 5 commits · uncommitted stats to `.claude/progress.md` after each session, then **auto-commits only `progress.md` + `pull --rebase --autostash` + push**. Silently skips on conflict, push failure, or missing upstream; log at `.claude/hooks/.last-sync.log` (gitignored). Disable with `CLAUDE_AUTO_PUSH=0`.
 - New `.claude/hooks/session-start.sh` — prints the last 40 lines of `progress.md` at session start and warns about ahead/behind vs. upstream.
 - New `.claude/progress.md` — shared activity log, auto-appended by the hook.
 - `.gitignore` now excludes only `.claude/settings.local.json` (personal overrides), so the shared settings propagate.

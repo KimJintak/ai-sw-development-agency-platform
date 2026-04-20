@@ -19,7 +19,10 @@
   `SessionStart` 훅 정의. 모든 디바이스가 같은 설정을 가짐.
 - **`.claude/hooks/stop.sh`** — 세션 종료마다 `.claude/progress.md`에
   타임스탬프 · hostname · 브랜치 · 최근 5개 커밋 · uncommitted stats 자동
-  추가. `git add`까지만 하고 commit/push는 사용자 판단.
+  추가 + **progress.md만 정확히 auto-commit + `pull --rebase --autostash`
+  + push**. 충돌·push 실패·upstream 없음 등은 조용히 skip, 로그는
+  `.claude/hooks/.last-sync.log` (gitignore). `CLAUDE_AUTO_PUSH=0`으로
+  비활성 가능.
 - **`.claude/hooks/session-start.sh`** — 세션 시작 시 `progress.md` 마지막
   40줄 노출 + 원격과의 ahead/behind 알림.
 - **`.claude/progress.md`** — 디바이스 간 공유 작업 로그 (훅이 자동 누적).

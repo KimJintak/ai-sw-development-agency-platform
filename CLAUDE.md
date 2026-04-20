@@ -82,8 +82,11 @@ node --env-file=.env apps/api/scripts/smoke-llm.mjs <task>
 
 - **`.claude/settings.json`** — 권한·훅을 모든 디바이스 공유 (git tracked)
 - **`CLAUDE.md`** — 이 파일 자체
-- **`.claude/progress.md`** — `Stop` 훅이 세션 종료마다 자동 추가
-  (git add까지; commit·push는 사용자 판단)
+- **`.claude/progress.md`** — `Stop` 훅이 세션 종료마다 자동 추가 + 자동
+  commit + `pull --rebase` + push (progress.md 만 대상; 다른 파일 절대
+  함께 커밋되지 않음). 충돌·에러는 조용히 건너뜀, 로그는
+  `.claude/hooks/.last-sync.log` (gitignore). 자동 push 끄려면
+  `export CLAUDE_AUTO_PUSH=0`.
 - **`SessionStart` 훅** — 세션 시작 시 최근 40줄 progress 노출 + 원격 ahead/behind
   알림
 
