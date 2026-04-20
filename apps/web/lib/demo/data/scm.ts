@@ -60,7 +60,7 @@ export function getDemoRepo(projectId: string) {
     repo: r.repo,
     defaultBranch: r.defaultBranch,
     private: r.private,
-    htmlUrl: `https://github.com/${r.owner}/${r.repo}`,
+    htmlUrl: '#',
     description: r.description,
     pushedAt: hours(2),
     stargazersCount: r.stars,

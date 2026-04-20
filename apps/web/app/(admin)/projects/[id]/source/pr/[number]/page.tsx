@@ -169,9 +169,18 @@ export default function PrDetailPage({
               <span className="text-red-600">-{pr.deletions}</span>
             </div>
           </div>
-          <a href={pr.htmlUrl} target="_blank" rel="noreferrer" className="shrink-0 h-8 px-3 inline-flex items-center gap-1 text-xs rounded-md border hover:bg-muted">
-            GitHub <ExternalLink size={10} />
-          </a>
+          {(pr.htmlUrl === '#' || !pr.htmlUrl) ? (
+            <button
+              onClick={() => alert('데모 모드 — 실제 PR이 아닙니다.')}
+              className="shrink-0 h-8 px-3 inline-flex items-center gap-1 text-xs rounded-md border border-dashed bg-muted text-muted-foreground cursor-not-allowed"
+            >
+              GitHub (데모)
+            </button>
+          ) : (
+            <a href={pr.htmlUrl} target="_blank" rel="noreferrer" className="shrink-0 h-8 px-3 inline-flex items-center gap-1 text-xs rounded-md border hover:bg-muted">
+              GitHub <ExternalLink size={10} />
+            </a>
+          )}
         </div>
         {pr.body && (
           <div className="mt-3 text-sm text-muted-foreground whitespace-pre-wrap border-t border-border pt-3">

@@ -157,14 +157,23 @@ export default function ProjectSourcePage({ params }: { params: Promise<{ id: st
             <button onClick={load} className="h-8 px-2 inline-flex items-center gap-1 text-xs rounded-md border hover:bg-muted">
               <RefreshCw size={12} />
             </button>
-            <a
-              href={repo.htmlUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="h-8 px-3 inline-flex items-center gap-1 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90"
-            >
-              GitHub 열기 <ExternalLink size={10} />
-            </a>
+            {(repo.htmlUrl === '#' || !repo.htmlUrl) ? (
+              <button
+                onClick={() => alert('데모 모드 — 실제 저장소가 연결되어 있지 않습니다.\n\n실제 환경에서는 GitHub 저장소 페이지로 이동합니다.')}
+                className="h-8 px-3 inline-flex items-center gap-1 text-xs rounded-md bg-muted text-muted-foreground border border-dashed cursor-not-allowed"
+              >
+                GitHub (데모)
+              </button>
+            ) : (
+              <a
+                href={repo.htmlUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="h-8 px-3 inline-flex items-center gap-1 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90"
+              >
+                GitHub 열기 <ExternalLink size={10} />
+              </a>
+            )}
           </div>
         </header>
       )}
