@@ -104,14 +104,23 @@ export class AgentsService {
     // picks it up and dispatches to an online agent of the matching type.
     // Failure path: task row is kept in SUBMITTED state with errorLog set,
     // so a future outbox worker (Phase 3.5) can retry publish.
+    //
+    // correlation_id = task.id by default — gives us one traceable key that
+    // flows through Redis → Orchestrator → Agent → callback. When the API
+    // caller eventually wires request-scoped cids, they can override by
+    // supplying `correlation_id` inside dto.payload.
+    const correlationId =
+      (dto.payload as Record<string, unknown> | undefined)?.correlation_id as string | undefined ??
+      task.id
     try {
       await this.redis.publishTask({
         taskId: task.id,
         projectId: task.projectId!,
         agentType: dto.agentType,
         taskType: task.taskType,
-        payload: dto.payload,
+        payload: { ...dto.payload, correlation_id: correlationId },
       })
+      this.logger.log(`task.created task_id=${task.id} cid=${correlationId}`)
       return task
     } catch (err) {
       const message = (err as Error).message

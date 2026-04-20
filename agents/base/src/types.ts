@@ -4,6 +4,12 @@ export interface TaskPayload {
   project_id: string
   agent_type: string
   task_type?: string
+  /**
+   * Correlation ID to trace a single logical request across API →
+   * Orchestrator → Agent → callback. Defaults to the task_id when the
+   * upstream caller does not supply one.
+   */
+  correlation_id?: string
   payload: Record<string, unknown>
 }
 

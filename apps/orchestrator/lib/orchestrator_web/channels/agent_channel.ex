@@ -29,16 +29,22 @@ defmodule OrchestratorWeb.AgentChannel do
 
   def handle_in("task:update", payload, socket) do
     agent_id = socket.assigns.agent_id
-    Logger.debug("task update from #{agent_id}: #{inspect(payload)}")
-    Orchestrator.TaskCallback.report_update(payload["task_id"], agent_id, payload)
+    cid = correlation_id(payload)
+    Logger.debug("task update from #{agent_id} task_id=#{payload["task_id"]} cid=#{cid}")
+    Orchestrator.TaskCallback.report_update(payload["task_id"], agent_id, payload, cid)
     {:reply, :ok, socket}
   end
 
   def handle_in("task:complete", payload, socket) do
     agent_id = socket.assigns.agent_id
-    Logger.info("task complete from #{agent_id}: #{inspect(payload["task_id"])}")
-    Orchestrator.TaskCallback.report_complete(payload["task_id"], agent_id, payload)
+    cid = correlation_id(payload)
+    Logger.info("task complete from #{agent_id} task_id=#{payload["task_id"]} cid=#{cid}")
+    Orchestrator.TaskCallback.report_complete(payload["task_id"], agent_id, payload, cid)
     {:reply, :ok, socket}
+  end
+
+  defp correlation_id(payload) do
+    payload["correlation_id"] || payload["task_id"] || "unknown"
   end
 
   @impl true

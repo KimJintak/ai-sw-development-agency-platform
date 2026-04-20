@@ -40,4 +40,9 @@ export class TaskUpdateDto {
   @IsString()
   @IsOptional()
   agent_id?: string
+
+  @ApiProperty({ required: false, description: 'Correlation ID for cross-service tracing' })
+  @IsString()
+  @IsOptional()
+  correlation_id?: string
 }

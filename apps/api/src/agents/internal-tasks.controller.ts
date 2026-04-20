@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Headers, Logger, Param, Post, UseGuards } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { AgentsService } from './agents.service'
 import { TaskUpdateDto } from './dto/task-update.dto'
@@ -14,17 +14,33 @@ import { OrchestratorAuthGuard } from '../common/guards/orchestrator-auth.guard'
 @UseGuards(OrchestratorAuthGuard)
 @Controller('internal/tasks')
 export class InternalTasksController {
+  private readonly logger = new Logger(InternalTasksController.name)
+
   constructor(private readonly service: AgentsService) {}
 
   @Post(':id/updates')
   @ApiOperation({ summary: 'Receive task update from Orchestrator' })
-  update(@Param('id') id: string, @Body() dto: TaskUpdateDto) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: TaskUpdateDto,
+    @Headers('x-correlation-id') cidHeader?: string,
+  ) {
+    const cid = cidHeader ?? dto.correlation_id ?? id
+    this.logger.log(`task.update task_id=${id} cid=${cid} status=${dto.status ?? '?'}`)
     return this.service.applyUpdate(id, dto)
   }
 
   @Post(':id/complete')
   @ApiOperation({ summary: 'Receive task completion from Orchestrator' })
-  complete(@Param('id') id: string, @Body() dto: TaskCompleteDto) {
+  complete(
+    @Param('id') id: string,
+    @Body() dto: TaskCompleteDto,
+    @Headers('x-correlation-id') cidHeader?: string,
+  ) {
+    const cid = cidHeader ?? dto.correlation_id ?? id
+    this.logger.log(
+      `task.complete task_id=${id} cid=${cid} success=${dto.success ?? true}`,
+    )
     return this.service.markComplete(id, dto)
   }
 }
