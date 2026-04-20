@@ -11,6 +11,7 @@ import { demoAgentCards, demoAgentTasks } from './data/agents'
 import { demoInboxItems } from './data/messages'
 import { demoOpsSummary, demoStalled, demoWatchKeywords, demoFeed } from './data/admin-ops'
 import { getDemoDocuments, getDemoDocument } from './data/documents'
+import { getDemoLinks } from './data/links'
 import {
   getDemoRepo,
   getDemoBranches,
@@ -135,6 +136,12 @@ const routes: RouteHandler[] = [
   { pattern: /^\/api\/documents\/([^/]+)$/, method: 'DELETE', handler: () => ({ success: true }) },
   { pattern: /^\/api\/documents\/([^/]+)\/attachments$/, method: 'POST', handler: () => ({ success: true, count: 1 }) },
   { pattern: /^\/api\/documents\/attachments\/([^/]+)$/, method: 'DELETE', handler: () => ({ success: true }) },
+
+  // Project Links
+  { pattern: new RegExp(`^/api/projects/${PID}/links$`), method: 'GET', handler: (m) => getDemoLinks(resolveProjectId(m[1])) },
+  { pattern: new RegExp(`^/api/projects/${PID}/links$`), method: 'POST', handler: () => ({ id: 'demo-link-new', success: true }) },
+  { pattern: /^\/api\/project-links\/[^/]+$/, method: 'PATCH', handler: () => ({ success: true }) },
+  { pattern: /^\/api\/project-links\/[^/]+$/, method: 'DELETE', handler: () => ({ success: true }) },
 
   // SCM (Source Control)
   { pattern: new RegExp(`^/api/projects/${PID}/scm/repo$`), handler: (m) => getDemoRepo(resolveProjectId(m[1])) },

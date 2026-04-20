@@ -20,6 +20,7 @@ import { FeedbackModule } from './feedback/feedback.module'
 import { DocumentsModule } from './documents/documents.module'
 import { LlmModule } from './llm/llm.module'
 import { ScmModule } from './scm/scm.module'
+import { ProjectLinksModule } from './project-links/project-links.module'
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ScmModule } from './scm/scm.module'
     FeedbackModule,
     DocumentsModule,
     ScmModule,
+    ProjectLinksModule,
   ],
 })
 export class AppModule {}

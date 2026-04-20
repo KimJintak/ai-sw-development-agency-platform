@@ -16,6 +16,7 @@ import {
   GitPullRequest,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
+import { LinkHub } from '@/components/project/link-hub'
 import type { Project, WorkItem } from 'shared-types'
 import { WorkItemStatus, WorkItemType } from 'shared-types'
 
@@ -179,6 +180,8 @@ export default function ProjectDetailPage() {
           </Link>
         </div>
       </div>
+
+      <LinkHub projectId={id} />
 
       <div className="relative">
         <div className="flex gap-1 overflow-x-auto pb-0 pt-1 px-1 -mx-1">

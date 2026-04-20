@@ -152,8 +152,40 @@ model Project {
   chatMessages    ChatMessage[]
   chatReads       ChatReadState[]
   documents       ProjectDocument[]
+  links           ProjectLink[]
 
   @@map("projects")
+}
+
+model ProjectLink {
+  id          String           @id @default(cuid())
+  projectId   String           @map("project_id")
+  category    ProjectLinkCategory
+  label       String
+  url         String
+  description String?
+  sortOrder   Int              @default(0) @map("sort_order")
+  createdBy   String?          @map("created_by")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sortOrder])
+  @@map("project_links")
+}
+
+enum ProjectLinkCategory {
+  FIGMA
+  PROTOTYPE
+  WBS
+  SRS
+  STAGING
+  PRODUCTION
+  DOCS
+  REPO
+  QA_SHEET
+  OTHER
 }
 
 enum DocumentCategory {
