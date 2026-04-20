@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import Anthropic from '@anthropic-ai/sdk'
+import { generateText } from 'ai'
+import { LlmService } from '../llm/llm.service'
 
 export interface GenerateFeatureInput {
   projectName: string
@@ -17,20 +17,15 @@ export interface GenerateFeatureResult {
 @Injectable()
 export class PmAgentService {
   private readonly logger = new Logger(PmAgentService.name)
-  private readonly client: Anthropic | null
-  private readonly model: string
 
-  constructor(private readonly config: ConfigService) {
-    const apiKey = config.get<string>('ANTHROPIC_API_KEY')
-    this.client = apiKey ? new Anthropic({ apiKey }) : null
-    this.model = config.get<string>('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514')
-    if (!this.client) {
-      this.logger.warn('ANTHROPIC_API_KEY not set — PM Agent will use dry-run mode')
+  constructor(private readonly llm: LlmService) {
+    if (!this.llm.hasAnyKey) {
+      this.logger.warn('No LLM provider key set — PM Agent will use dry-run mode')
     }
   }
 
   async generateFeature(input: GenerateFeatureInput): Promise<GenerateFeatureResult> {
-    if (!this.client) {
+    if (!this.llm.hasAnyKey) {
       return this.dryRun(input)
     }
 
@@ -45,22 +40,12 @@ Rules:
 - Add @platform tags for each target platform: ${input.platforms.map((p) => `@${p.toLowerCase()}`).join(', ')}.
 - Write in the same language as the input (Korean or English).`
 
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: 2000,
+    const { text } = await generateText({
+      model: this.llm.modelFor('pm'),
       system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: `Project: ${input.projectName}\nPlatforms: ${input.platforms.join(', ')}\n\nRequirement (natural language):\n${input.naturalLanguage}`,
-        },
-      ],
+      prompt: `Project: ${input.projectName}\nPlatforms: ${input.platforms.join(', ')}\n\nRequirement (natural language):\n${input.naturalLanguage}`,
+      maxOutputTokens: 2000,
     })
-
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
 
     const title = this.extractTitle(text, input.naturalLanguage)
 
@@ -87,8 +72,8 @@ Feature: ${title}
       """
     Then 해당 기능이 구현되어야 한다
 
-# [DRY-RUN] ANTHROPIC_API_KEY가 설정되지 않아 템플릿으로 생성됨
-# 실제 환경에서는 Claude가 자연어를 분석하여 구체적인 시나리오를 생성합니다.`
+# [DRY-RUN] LLM 프로바이더 키가 설정되지 않아 템플릿으로 생성됨
+# 실제 환경에서는 선택된 LLM이 자연어를 분석하여 구체적인 시나리오를 생성합니다.`
 
     return { title, featureFile, platforms: input.platforms }
   }

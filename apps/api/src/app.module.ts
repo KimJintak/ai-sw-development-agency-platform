@@ -18,12 +18,14 @@ import { ReleasesModule } from './releases/releases.module'
 import { PortalModule } from './portal/portal.module'
 import { FeedbackModule } from './feedback/feedback.module'
 import { DocumentsModule } from './documents/documents.module'
+import { LlmModule } from './llm/llm.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     ScheduleModule.forRoot(),
+    LlmModule,
     PrismaModule,
     RedisModule,
     AuthModule,
