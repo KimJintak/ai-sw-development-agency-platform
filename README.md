@@ -139,11 +139,19 @@ LLM_MODEL_TEST="openai:gpt-4o-mini"
 여러 키를 동시에 세팅하면 태스크마다 서로 다른 프로바이더를 자유롭게
 선택할 수 있습니다.
 
-- **`bedrock`** — AWS 계정 자격(`AWS_ACCESS_KEY_ID` / `AWS_PROFILE` / IAM
-  role)으로 Claude 등을 호출. 별도 Anthropic 키 불필요. 예:
-  `LLM_MODEL_DEFAULT="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0"`.
-  이미 AWS를 쓰고 있다면 새 키 관리 없이 Claude를 사용할 수 있는 가장
-  깔끔한 경로입니다.
+- **`bedrock`** — AWS 자격(환경변수·`~/.aws/credentials`·EC2 IAM Role 등
+  `fromNodeProviderChain`이 해상)으로 Claude 호출. 별도 Anthropic 키 불필요.
+  예: `LLM_MODEL_DEFAULT="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"`.
+  - 최신 Claude 모델은 **반드시 `us.` · `eu.` · `apac.` cross-region
+    inference profile prefix**를 붙여야 합니다 (foundation model ID 직접
+    호출은 on-demand throughput 미지원).
+  - EC2 IAM Role을 쓸 때는 `.env`의 `AWS_ACCESS_KEY_ID` /
+    `AWS_SECRET_ACCESS_KEY`를 **빈 문자열이라도 두지 마세요** — IMDS
+    자동 탐지가 무시됩니다. 줄을 아예 제거해야 합니다.
+  - IAM 최소 권한: `bedrock:InvokeModel`,
+    `bedrock:InvokeModelWithResponseStream` — Resource는
+    `arn:aws:bedrock:*::foundation-model/*`와
+    `arn:aws:bedrock:*:*:inference-profile/*` 둘 다 포함.
 - **`openrouter`** — 키 1개로 Claude/GPT/Gemini 등 모든 모델을 프록시.
   모델 id는 `openrouter:anthropic/claude-sonnet-4.5` 형태.
 
@@ -315,11 +323,20 @@ LLM_MODEL_TEST="openai:gpt-4o-mini"
 Supported providers: `anthropic` · `openai` · `google` · `openrouter` · `bedrock`.
 Mix and match freely per task.
 
-- **`bedrock`** — call Claude (and other Bedrock-hosted models) using your
-  AWS credentials (`AWS_ACCESS_KEY_ID` / `AWS_PROFILE` / IAM role). No
-  Anthropic API key required. Example:
-  `LLM_MODEL_DEFAULT="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0"`.
-  If you're already using AWS, this is the cleanest zero-extra-key path.
+- **`bedrock`** — call Claude via your AWS credentials (env vars,
+  `~/.aws/credentials`, or EC2 IAM Role — resolved by `fromNodeProviderChain`).
+  No Anthropic API key required. Example:
+  `LLM_MODEL_DEFAULT="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"`.
+  - Newer Claude models **require a cross-region inference-profile
+    prefix** (`us.` / `eu.` / `apac.`). Calling the raw foundation-model
+    ID fails with "on-demand throughput isn't supported".
+  - With an EC2 IAM Role, do **not** leave `AWS_ACCESS_KEY_ID` /
+    `AWS_SECRET_ACCESS_KEY` in `.env` — even empty strings block IMDS
+    discovery. Remove the lines entirely.
+  - Minimum IAM policy: `bedrock:InvokeModel` +
+    `bedrock:InvokeModelWithResponseStream` with Resource covering both
+    `arn:aws:bedrock:*::foundation-model/*` and
+    `arn:aws:bedrock:*:*:inference-profile/*`.
 - **`openrouter`** — one key proxies every provider. Model id like
   `openrouter:anthropic/claude-sonnet-4.5`.
 

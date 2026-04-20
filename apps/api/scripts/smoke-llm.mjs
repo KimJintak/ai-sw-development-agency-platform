@@ -11,7 +11,8 @@ import { generateText } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { openai, createOpenAI } from '@ai-sdk/openai'
 import { google } from '@ai-sdk/google'
-import { bedrock } from '@ai-sdk/amazon-bedrock'
+import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
+import { fromNodeProviderChain } from '@aws-sdk/credential-providers'
 
 const DEFAULT_MODEL_ID = 'anthropic:claude-sonnet-4-5'
 
@@ -43,8 +44,20 @@ function resolveModel(id) {
       if (!key) throw new Error('OPENROUTER_API_KEY 미설정')
       return createOpenAI({ baseURL: 'https://openrouter.ai/api/v1', apiKey: key })(modelId)
     }
-    case 'bedrock':
+    case 'bedrock': {
+      const bedrock = createAmazonBedrock({
+        region: process.env.AWS_REGION,
+        credentialProvider: async () => {
+          const creds = await fromNodeProviderChain()()
+          return {
+            accessKeyId: creds.accessKeyId,
+            secretAccessKey: creds.secretAccessKey,
+            sessionToken: creds.sessionToken,
+          }
+        },
+      })
       return bedrock(modelId)
+    }
     default:
       throw new Error(`알 수 없는 provider: "${provider}"`)
   }

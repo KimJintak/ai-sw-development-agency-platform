@@ -1,7 +1,8 @@
 import { anthropic } from '@ai-sdk/anthropic'
 import { openai, createOpenAI } from '@ai-sdk/openai'
 import { google } from '@ai-sdk/google'
-import { bedrock } from '@ai-sdk/amazon-bedrock'
+import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
+import { fromNodeProviderChain } from '@aws-sdk/credential-providers'
 import type { LanguageModel } from 'ai'
 
 export type LlmTask = 'default' | 'pm' | 'triage' | 'summarize' | 'code' | 'test'
@@ -55,8 +56,20 @@ export function resolveModel(id: string): LanguageModel {
       })
       return openrouter(modelId)
     }
-    case 'bedrock':
+    case 'bedrock': {
+      const bedrock = createAmazonBedrock({
+        region: process.env.AWS_REGION,
+        credentialProvider: async () => {
+          const creds = await fromNodeProviderChain()()
+          return {
+            accessKeyId: creds.accessKeyId,
+            secretAccessKey: creds.secretAccessKey,
+            sessionToken: creds.sessionToken,
+          }
+        },
+      })
       return bedrock(modelId)
+    }
     default:
       throw new Error(`Unknown LLM provider "${provider}" in model id "${id}"`)
   }
