@@ -178,3 +178,14 @@ Recent commits:
 - 9e23517 fix(agents): AGENT_ENDPOINT 포트 정정 + 재접속 지수 백오프
 
 Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
+
+## 2026-04-20T05:23:57Z · ip-172-31-47-35 · main
+
+Recent commits:
+- acea1ba chore(progress): auto log from ip-172-31-47-35
+- c535915 fix(web): demo SCM 'GitHub 열기' button no longer 404s
+- 3382aaa chore(progress): auto log from ip-172-31-47-35
+- d68d6a2 feat(orchestrator): TaskCallback 재시도 outbox — API 장애 시에도 이벤트 유실 방지
+- e2a9a57 feat(agents): correlation_id 전 구간 전파 — API ↔ Orchestrator ↔ Agent
+
+Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
