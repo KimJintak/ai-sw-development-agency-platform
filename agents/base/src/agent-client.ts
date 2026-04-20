@@ -24,6 +24,7 @@ export class AgentClient {
   private handler: TaskHandler
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private reconnectAttempts = 0
   private ref = 0
   private joinRef = '1'
   private topic: string
@@ -119,6 +120,7 @@ export class AgentClient {
   private handleReply(payload: { status: string; response: unknown }): void {
     if (payload.status === 'ok' && !this.connected) {
       this.connected = true
+      this.reconnectAttempts = 0 // reset backoff on successful join
       console.log(`[${this.config.agentId}] Joined channel ${this.topic} ✓`)
       this.startHeartbeat()
     } else if (payload.status === 'error') {
@@ -133,51 +135,63 @@ export class AgentClient {
       project_id: raw.project_id,
       agent_type: raw.agent_type || (raw as any).task?.agent_type,
       task_type: raw.task_type || (raw as any).task?.task_type,
+      correlation_id: raw.correlation_id || raw.task_id,
       payload: raw.payload || raw,
     }
 
-    console.log(`[${this.config.agentId}] Received task: ${task.task_id}`)
+    const cid = task.correlation_id
+    console.log(`[${this.config.agentId}] Received task: ${task.task_id} (cid=${cid})`)
 
     // Report start
-    this.sendTaskUpdate(task.task_id, { status: 'WORKING', progress: 0, log: 'Task started' })
+    this.sendTaskUpdate(task.task_id, cid, {
+      status: 'WORKING',
+      progress: 0,
+      log: 'Task started',
+    })
 
     try {
       const result = await this.handler(task)
 
       if (result.status === 'completed') {
-        this.sendTaskComplete(task.task_id, {
+        this.sendTaskComplete(task.task_id, cid, {
           status: 'COMPLETED',
           result: result.result || {},
         })
-        console.log(`[${this.config.agentId}] Task ${task.task_id} completed ✓`)
+        console.log(`[${this.config.agentId}] Task ${task.task_id} completed ✓ (cid=${cid})`)
       } else {
-        this.sendTaskComplete(task.task_id, {
+        this.sendTaskComplete(task.task_id, cid, {
           status: 'FAILED',
           error: result.error || 'Unknown error',
         })
-        console.log(`[${this.config.agentId}] Task ${task.task_id} failed: ${result.error}`)
+        console.log(
+          `[${this.config.agentId}] Task ${task.task_id} failed: ${result.error} (cid=${cid})`,
+        )
       }
     } catch (err: any) {
-      this.sendTaskComplete(task.task_id, {
+      this.sendTaskComplete(task.task_id, cid, {
         status: 'FAILED',
         error: err.message,
       })
-      console.error(`[${this.config.agentId}] Task ${task.task_id} threw:`, err.message)
+      console.error(
+        `[${this.config.agentId}] Task ${task.task_id} threw: ${err.message} (cid=${cid})`,
+      )
     }
   }
 
-  /** Send a progress update for a task */
-  sendTaskUpdate(taskId: string, payload: Record<string, unknown>): void {
+  /** Send a progress update for a task (correlation_id echoed through) */
+  sendTaskUpdate(taskId: string, correlationId: string | undefined, payload: Record<string, unknown>): void {
     this.send(this.joinRef, this.nextRef(), this.topic, 'task:update', {
       task_id: taskId,
+      correlation_id: correlationId ?? taskId,
       ...payload,
     })
   }
 
-  /** Send a completion message for a task */
-  sendTaskComplete(taskId: string, payload: Record<string, unknown>): void {
+  /** Send a completion message for a task (correlation_id echoed through) */
+  sendTaskComplete(taskId: string, correlationId: string | undefined, payload: Record<string, unknown>): void {
     this.send(this.joinRef, this.nextRef(), this.topic, 'task:complete', {
       task_id: taskId,
+      correlation_id: correlationId ?? taskId,
       ...payload,
     })
   }
@@ -212,10 +226,17 @@ export class AgentClient {
 
   private scheduleReconnect(): void {
     if (this.reconnectTimer) return
-    console.log(`[${this.config.agentId}] Reconnecting in 5s...`)
+    // Exponential backoff with jitter — 1s → 2s → 4s → 8s → … → max 60s
+    const base = Math.min(1000 * 2 ** this.reconnectAttempts, 60_000)
+    const jitter = Math.floor(Math.random() * 500)
+    const delay = base + jitter
+    this.reconnectAttempts++
+    console.log(
+      `[${this.config.agentId}] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})...`,
+    )
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
       this.connect()
-    }, 5000)
+    }, delay)
   }
 }
