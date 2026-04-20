@@ -9,6 +9,25 @@
 
 ## [미출시]
 
+### LLM 프로바이더 — AWS Bedrock 추가
+
+#### 추가
+- **`bedrock:` 프로바이더** 지원 (`apps/api/src/llm/llm.service.ts`,
+  `agents/base/src/llm.ts`, `apps/api/scripts/smoke-llm.mjs`). AWS 자격
+  체인(`AWS_ACCESS_KEY_ID` / `AWS_PROFILE` / IAM role + `AWS_REGION`)을
+  그대로 사용하므로 **별도 Anthropic 키 없이 Claude 호출 가능**.
+  예: `LLM_MODEL_DEFAULT="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0"`.
+- `hasAnyKey()` / `hasAnyLlmKey()`에 `AWS_ACCESS_KEY_ID` / `AWS_PROFILE`
+  감지 추가 — AWS 자격만 있어도 dry-run 분기에서 제외.
+- `.env.example`에 Bedrock 사용법 주석 + OpenRouter 예시.
+- README(KR/EN)에 "여러 디바이스에서 `.env` 동기화" 섹션 — 1Password CLI
+  (`op run --env-file=.env.tpl -- pnpm dev`) 등 비밀관리 도구 소개.
+
+#### 의존성
+- `apps/api` · `agents/base`: `@ai-sdk/amazon-bedrock` 추가.
+
+---
+
 ### LLM 프로바이더 추상화 — 벤더 락인 방지 (API + Agents)
 
 #### 추가

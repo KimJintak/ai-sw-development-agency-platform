@@ -1,6 +1,7 @@
 import { anthropic } from '@ai-sdk/anthropic'
 import { openai, createOpenAI } from '@ai-sdk/openai'
 import { google } from '@ai-sdk/google'
+import { bedrock } from '@ai-sdk/amazon-bedrock'
 import type { LanguageModel } from 'ai'
 
 export type LlmTask = 'default' | 'pm' | 'triage' | 'summarize' | 'code' | 'test'
@@ -12,7 +13,9 @@ export function hasAnyLlmKey(): boolean {
     process.env.ANTHROPIC_API_KEY ||
       process.env.OPENAI_API_KEY ||
       process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
-      process.env.OPENROUTER_API_KEY,
+      process.env.OPENROUTER_API_KEY ||
+      process.env.AWS_ACCESS_KEY_ID ||
+      process.env.AWS_PROFILE,
   )
 }
 
@@ -52,6 +55,8 @@ export function resolveModel(id: string): LanguageModel {
       })
       return openrouter(modelId)
     }
+    case 'bedrock':
+      return bedrock(modelId)
     default:
       throw new Error(`Unknown LLM provider "${provider}" in model id "${id}"`)
   }

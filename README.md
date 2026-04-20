@@ -135,10 +135,30 @@ LLM_MODEL_CODE="anthropic:claude-sonnet-4-5"
 LLM_MODEL_TEST="openai:gpt-4o-mini"
 ```
 
-지원 프로바이더: `anthropic` · `openai` · `google` · `openrouter`
-(OpenRouter는 단일 키로 모든 모델을 사용할 수 있는 게이트웨이).
-여러 키를 동시에 세팅하면 태스크마다 서로 다른 프로바이더를 자유롭게 선택할
-수 있습니다.
+지원 프로바이더: `anthropic` · `openai` · `google` · `openrouter` · `bedrock`.
+여러 키를 동시에 세팅하면 태스크마다 서로 다른 프로바이더를 자유롭게
+선택할 수 있습니다.
+
+- **`bedrock`** — AWS 계정 자격(`AWS_ACCESS_KEY_ID` / `AWS_PROFILE` / IAM
+  role)으로 Claude 등을 호출. 별도 Anthropic 키 불필요. 예:
+  `LLM_MODEL_DEFAULT="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0"`.
+  이미 AWS를 쓰고 있다면 새 키 관리 없이 Claude를 사용할 수 있는 가장
+  깔끔한 경로입니다.
+- **`openrouter`** — 키 1개로 Claude/GPT/Gemini 등 모든 모델을 프록시.
+  모델 id는 `openrouter:anthropic/claude-sonnet-4.5` 형태.
+
+### 여러 디바이스에서 `.env` 동기화
+
+4대 이상 개발 환경에서 키를 일관되게 유지하려면 비밀관리 도구를 권장합니다:
+
+```bash
+# 1Password CLI 예시 — .env 파일 없이 실행
+op run --env-file=.env.tpl -- pnpm dev
+```
+
+또는 Doppler·AWS Secrets Manager·direnv 등 워크플로에 맞는 도구를 사용하세요.
+Bedrock을 기본 LLM으로 쓰면 관리해야 할 키 종류 자체가 줄어듭니다
+(AWS 자격 한 벌이 곧 Claude 접근).
 
 ### Demo Mode
 
@@ -292,9 +312,30 @@ LLM_MODEL_CODE="anthropic:claude-sonnet-4-5"
 LLM_MODEL_TEST="openai:gpt-4o-mini"
 ```
 
-Supported providers: `anthropic` · `openai` · `google` · `openrouter`
-(OpenRouter is a gateway — one key for all models). Mix and match freely per
-task.
+Supported providers: `anthropic` · `openai` · `google` · `openrouter` · `bedrock`.
+Mix and match freely per task.
+
+- **`bedrock`** — call Claude (and other Bedrock-hosted models) using your
+  AWS credentials (`AWS_ACCESS_KEY_ID` / `AWS_PROFILE` / IAM role). No
+  Anthropic API key required. Example:
+  `LLM_MODEL_DEFAULT="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0"`.
+  If you're already using AWS, this is the cleanest zero-extra-key path.
+- **`openrouter`** — one key proxies every provider. Model id like
+  `openrouter:anthropic/claude-sonnet-4.5`.
+
+### Syncing `.env` across machines
+
+If you develop on multiple machines, use a secret manager instead of copying
+`.env` around:
+
+```bash
+# 1Password CLI — run without a committed .env
+op run --env-file=.env.tpl -- pnpm dev
+```
+
+Doppler / AWS Secrets Manager / direnv all work. Using Bedrock as the
+default LLM also reduces the number of secrets you need to sync (one AWS
+credential set covers Claude access).
 
 ### Demo Mode
 

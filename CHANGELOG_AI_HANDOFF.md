@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### LLM providers — AWS Bedrock added
+- New `bedrock:` provider in `apps/api/src/llm/llm.service.ts`, `agents/base/src/llm.ts`, and the smoke-test script. Uses the AWS credential chain (`AWS_ACCESS_KEY_ID` / `AWS_PROFILE` / IAM role + `AWS_REGION`), so **Claude can be called with no separate Anthropic API key**. Example: `LLM_MODEL_DEFAULT="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0"`.
+- `hasAnyKey()` / `hasAnyLlmKey()` now also accept `AWS_ACCESS_KEY_ID` / `AWS_PROFILE` as valid — AWS credentials alone disable dry-run.
+- `.env.example` comments cover Bedrock + OpenRouter routing patterns.
+- README (KR/EN) adds a "Syncing `.env` across machines" section (1Password CLI `op run --env-file=.env.tpl -- pnpm dev`, Doppler, etc.).
+- Dependency: `@ai-sdk/amazon-bedrock` added to `apps/api` and `agents/base`.
+
 ### LLM provider abstraction — no vendor lock-in (API + Agents)
 - New `LlmModule` / `LlmService` at `apps/api/src/llm/` built on `ai` + `@ai-sdk/*`. `modelFor(task)` reads `LLM_MODEL_<TASK>` and routes to `anthropic` / `openai` / `google` / `openrouter`. OpenRouter is supported via OpenAI-compatible baseURL override (one key → all models). `hasAnyLlmKey()` gates dry-run fallbacks.
 - New `agents/base/src/llm.ts` — the same helper for agents (`modelFor`, `modelIdFor`, `hasAnyLlmKey`, re-exports `generateText` / `streamText`). Any agent that imports from `agent-base` can switch providers via env vars alone.

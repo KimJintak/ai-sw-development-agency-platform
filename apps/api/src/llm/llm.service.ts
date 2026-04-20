@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { anthropic } from '@ai-sdk/anthropic'
 import { openai, createOpenAI } from '@ai-sdk/openai'
 import { google } from '@ai-sdk/google'
+import { bedrock } from '@ai-sdk/amazon-bedrock'
 import type { LanguageModel } from 'ai'
 
 export type LlmTask = 'default' | 'pm' | 'triage' | 'summarize'
@@ -26,7 +27,9 @@ export class LlmService {
       this.config.get<string>('ANTHROPIC_API_KEY') ||
         this.config.get<string>('OPENAI_API_KEY') ||
         this.config.get<string>('GOOGLE_GENERATIVE_AI_API_KEY') ||
-        this.config.get<string>('OPENROUTER_API_KEY'),
+        this.config.get<string>('OPENROUTER_API_KEY') ||
+        this.config.get<string>('AWS_ACCESS_KEY_ID') ||
+        this.config.get<string>('AWS_PROFILE'),
     )
   }
 
@@ -64,6 +67,8 @@ export class LlmService {
         })
         return openrouter(modelId)
       }
+      case 'bedrock':
+        return bedrock(modelId)
       default:
         throw new Error(`Unknown LLM provider "${provider}" in model id "${id}"`)
     }

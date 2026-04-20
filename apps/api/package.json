@@ -16,6 +16,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^4.0.96",
     "@ai-sdk/anthropic": "^3.0.71",
     "@ai-sdk/google": "^3.0.64",
     "@ai-sdk/openai": "^3.0.53",
@@ -30,6 +31,7 @@
     "@nestjs/swagger": "^8.0.0",
     "@nestjs/throttler": "^6.0.0",
     "@nestjs/websockets": "^11.0.0",
+    "@octokit/rest": "^22.0.1",
     "@prisma/client": "^6.3.0",
     "ai": "^6.0.168",
     "axios": "^1.7.9",
