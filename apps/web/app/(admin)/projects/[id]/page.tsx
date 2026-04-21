@@ -15,6 +15,7 @@ import {
   Files,
   GitPullRequest,
   HelpCircle,
+  ListTree,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { LinkHub } from '@/components/project/link-hub'
@@ -128,6 +129,7 @@ const TONES: Record<string, TabTone> = {
 
 const SUB_NAV: { label: string; href: string; icon: typeof Kanban; tone: keyof typeof TONES }[] = [
   { label: 'Work Items', href: '', icon: Kanban, tone: 'blue' },
+  { label: 'WBS', href: '/wbs', icon: ListTree, tone: 'sky' },
   { label: 'Requirements', href: '/requirements', icon: FileText, tone: 'emerald' },
   { label: 'Design', href: '/design', icon: GitBranch, tone: 'violet' },
   { label: 'QA', href: '/qa', icon: FlaskConical, tone: 'amber' },
