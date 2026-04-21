@@ -23,6 +23,7 @@ import { ScmModule } from './scm/scm.module'
 import { ProjectLinksModule } from './project-links/project-links.module'
 import { ProjectCredentialsModule } from './project-credentials/project-credentials.module'
 import { ProjectQnaModule } from './project-qna/project-qna.module'
+import { NotificationsModule } from './notifications/notifications.module'
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ProjectQnaModule } from './project-qna/project-qna.module'
     ProjectLinksModule,
     ProjectCredentialsModule,
     ProjectQnaModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

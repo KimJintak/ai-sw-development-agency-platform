@@ -865,3 +865,44 @@ model WatchKeyword {
   @@unique([keyword])
   @@map("watch_keywords")
 }
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS (Phase 25)
+// ─────────────────────────────────────────────
+
+model Notification {
+  id         String           @id @default(cuid())
+  recipientId String          @map("recipient_id")
+  type       NotificationType
+  title      String
+  body       String
+  link       String?
+  read       Boolean          @default(false)
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  @@index([recipientId, read, createdAt])
+  @@map("notifications")
+}
+
+model PortalNotification {
+  id            String           @id @default(cuid())
+  portalUserId  String           @map("portal_user_id")
+  type          NotificationType
+  title         String
+  body          String
+  link          String?
+  read          Boolean          @default(false)
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  @@index([portalUserId, read, createdAt])
+  @@map("portal_notifications")
+}
+
+enum NotificationType {
+  AGENT_TASK_DONE
+  REQUIREMENT_PENDING
+  QNA_ANSWERED
+  BUILD_READY
+  FEEDBACK_RECEIVED
+  GENERAL
+}

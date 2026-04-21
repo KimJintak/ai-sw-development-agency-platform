@@ -19,6 +19,7 @@ import {
 import { useDemoMode } from '@/lib/demo/demo-context'
 import { useI18n } from '@/lib/i18n/i18n-context'
 import type { TranslationKey } from '@/lib/i18n/translations'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 
 const nav: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
   { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
@@ -77,7 +78,10 @@ export function Sidebar() {
           </span>
           <span className="text-base">Agency</span>
         </Link>
-        <ThemeToggle compact />
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <ThemeToggle compact />
+        </div>
       </div>
 
       <nav className="flex-1 p-3 space-y-1">

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Building2, FolderKanban, LogOut } from 'lucide-react'
+import { PortalNotificationBell } from '@/components/notifications/portal-notification-bell'
 
 const nav = [
   { href: '/portal', label: '내 프로젝트', icon: FolderKanban },
@@ -37,13 +38,16 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             })}
           </nav>
         </div>
-        <button
-          onClick={() => { localStorage.clear(); window.location.href = '/portal/login' }}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <LogOut size={14} />
-          로그아웃
-        </button>
+        <div className="flex items-center gap-2">
+          <PortalNotificationBell />
+          <button
+            onClick={() => { localStorage.clear(); window.location.href = '/portal/login' }}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <LogOut size={14} />
+            로그아웃
+          </button>
+        </div>
       </header>
       <main className="max-w-6xl mx-auto p-6">{children}</main>
     </div>

@@ -1,10 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { Priority, QnaStatus, WorkItemStatus, WorkItemType } from '@prisma/client'
+import { NotificationType, Priority, QnaStatus, WorkItemStatus, WorkItemType } from '@prisma/client'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class ProjectQnaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   list(projectId: string, status?: QnaStatus) {
     return this.prisma.projectQna.findMany({
@@ -38,8 +42,8 @@ export class ProjectQnaService {
     id: string,
     input: { answer: string; answeredBy?: string; answeredByName?: string },
   ) {
-    await this.findOrFail(id)
-    return this.prisma.projectQna.update({
+    const qna = await this.findOrFail(id)
+    const updated = await this.prisma.projectQna.update({
       where: { id },
       data: {
         answer: input.answer,
@@ -49,6 +53,27 @@ export class ProjectQnaService {
         status: QnaStatus.ANSWERED,
       },
     })
+
+    // 질문 등록자에게 답변 알림 (포털 유저인 경우)
+    if (qna.askedBy) {
+      const portalUser = await this.prisma.portalUser.findUnique({
+        where: { id: qna.askedBy },
+        select: { id: true },
+      })
+      if (portalUser) {
+        await this.notifications
+          .createPortal(
+            portalUser.id,
+            NotificationType.QNA_ANSWERED,
+            'Q&A 답변이 등록되었습니다',
+            qna.question.slice(0, 80),
+            `/portal/${qna.projectId}`,
+          )
+          .catch(() => null)
+      }
+    }
+
+    return updated
   }
 
   async updateStatus(id: string, status: QnaStatus) {

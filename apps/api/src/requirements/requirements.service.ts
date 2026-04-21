@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
-import { Platform, Prisma, RequirementStatus, WorkItemStatus } from '@prisma/client'
+import { NotificationType, Platform, Prisma, RequirementStatus, WorkItemStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import {
   ApproveRequirementDto,
@@ -7,12 +7,16 @@ import {
   LinkWorkItemDto,
   UpdateRequirementDto,
 } from './dto/requirement.dto'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class RequirementsService {
   private readonly logger = new Logger(RequirementsService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   findByProject(projectId: string) {
     return this.prisma.requirement.findMany({
@@ -145,11 +149,43 @@ export class RequirementsService {
         })
       }
 
-      return tx.requirement.update({
+      const updated = await tx.requirement.update({
         where: { id },
         data: updateData,
       })
+
+      if (dto.status === RequirementStatus.PENDING_APPROVAL) {
+        await this.notifyPortalUsersOnApprovalRequest(updated.projectId, updated.title, updated.id).catch(
+          (err) => this.logger.warn(`notify portal failed: ${(err as Error).message}`),
+        )
+      }
+
+      return updated
     })
+  }
+
+  private async notifyPortalUsersOnApprovalRequest(projectId: string, reqTitle: string, reqId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { customerId: true },
+    })
+    if (!project?.customerId) return
+
+    const portalUsers = await this.prisma.portalUser.findMany({
+      where: { customerId: project.customerId },
+      select: { id: true },
+    })
+    await Promise.all(
+      portalUsers.map((u) =>
+        this.notifications.createPortal(
+          u.id,
+          NotificationType.REQUIREMENT_PENDING,
+          '요구사항 승인 요청',
+          reqTitle,
+          `/portal/${projectId}`,
+        ),
+      ),
+    )
   }
 
   async approve(id: string, dto: ApproveRequirementDto) {

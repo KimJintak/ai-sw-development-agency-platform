@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException, forwardRef } from '@nestjs/common'
-import { AgentTaskStatus, AgentType, ChatMessageKind, Prisma } from '@prisma/client'
+import { AgentTaskStatus, AgentType, ChatMessageKind, NotificationType, Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { RedisService } from '../common/redis/redis.service'
 import { CreateAgentTaskDto } from './dto/create-agent-task.dto'
@@ -8,6 +8,7 @@ import { TaskUpdateDto } from './dto/task-update.dto'
 import { TaskCompleteDto } from './dto/task-complete.dto'
 import { ChatService } from '../chat/chat.service'
 import { ChatGateway } from '../chat/chat.gateway'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class AgentsService {
@@ -20,6 +21,7 @@ export class AgentsService {
     private readonly chat: ChatService,
     @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private async postChatStatus(taskId: string, body: string, kind: ChatMessageKind) {
@@ -208,6 +210,33 @@ export class AgentsService {
       ChatMessageKind.STATUS,
     )
 
+    if (success) {
+      await this.notifyProjectMembers(updated.projectId, id, updated.taskType)
+    }
+
     return updated
+  }
+
+  private async notifyProjectMembers(projectId: string | null, taskId: string, taskTitle: string) {
+    if (!projectId) return
+    try {
+      const members = await this.prisma.projectMember.findMany({
+        where: { projectId },
+        select: { userId: true },
+      })
+      await Promise.all(
+        members.map((m) =>
+          this.notifications.create(
+            m.userId,
+            NotificationType.AGENT_TASK_DONE,
+            '에이전트 태스크 완료',
+            taskTitle,
+            `/projects/${projectId}/wbs`,
+          ),
+        ),
+      )
+    } catch (err) {
+      this.logger.warn(`notification failed for task ${taskId}: ${(err as Error).message}`)
+    }
   }
 }
