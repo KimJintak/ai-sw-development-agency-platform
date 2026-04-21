@@ -128,4 +128,10 @@ export class QaController {
   getCoverage(@Param('projectId') projectId: string) {
     return this.service.getProjectCoverage(projectId)
   }
+
+  @Get('project-runs/:projectId')
+  @ApiOperation({ summary: 'List all test runs for a project (via releases)' })
+  listRunsByProject(@Param('projectId') projectId: string) {
+    return this.service.findTestRunsByProject(projectId)
+  }
 }

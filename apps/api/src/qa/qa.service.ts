@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
-import { Platform, TestResultStatus, TestRunStatus } from '@prisma/client'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Platform, TestResultStatus, TestRunStatus, WorkItemStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import {
   CreateTestCaseDto,
@@ -11,6 +11,8 @@ import {
 
 @Injectable()
 export class QaService {
+  private readonly logger = new Logger(QaService.name)
+
   constructor(private readonly prisma: PrismaService) {}
 
   /* ────────── TestCase ────────── */
@@ -76,6 +78,17 @@ export class QaService {
     })
   }
 
+  findTestRunsByProject(projectId: string) {
+    return this.prisma.testRun.findMany({
+      where: { release: { projectId } },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        release: { select: { id: true, version: true } },
+        _count: { select: { testResults: true } },
+      },
+    })
+  }
+
   async findTestRun(id: string) {
     const run = await this.prisma.testRun.findUnique({
       where: { id },
@@ -129,7 +142,7 @@ export class QaService {
   /* ────────── TestResult ────────── */
 
   async recordResult(testRunId: string, dto: RecordTestResultDto) {
-    return this.prisma.testResult.create({
+    const result = await this.prisma.testResult.create({
       data: {
         testRunId,
         testCaseId: dto.testCaseId,
@@ -137,7 +150,22 @@ export class QaService {
         duration: dto.duration,
         errorLog: dto.errorLog,
       },
+      include: { testCase: { select: { workItemId: true } } },
     })
+
+    // FR-07-04: 실패 시 연결된 WorkItem 상태를 REVIEW로 자동 전환
+    if (dto.status === 'FAILED' && result.testCase.workItemId) {
+      await this.prisma.workItem
+        .update({
+          where: { id: result.testCase.workItemId },
+          data: { status: WorkItemStatus.REVIEW },
+        })
+        .catch((err) =>
+          this.logger.warn(`auto-review workItem failed: ${(err as Error).message}`),
+        )
+    }
+
+    return result
   }
 
   findResults(testRunId: string) {
