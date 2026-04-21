@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import apiClient from '@/lib/api-client'
-import { Send, Bot, User as UserIcon, Settings2, Wifi, WifiOff } from 'lucide-react'
+import { Send, Bot, User as UserIcon, Settings2, Wifi, WifiOff, HelpCircle, X } from 'lucide-react'
 import { useDemoMode } from '@/lib/demo/demo-context'
 
 type AuthorType = 'USER' | 'AGENT' | 'SYSTEM'
@@ -27,6 +27,7 @@ export function ChatRoom({ projectId }: { projectId: string }) {
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(false)
+  const [qnaTarget, setQnaTarget] = useState<ChatMessage | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<Socket | null>(null)
   const { isDemoMode } = useDemoMode()
@@ -145,7 +146,7 @@ export function ChatRoom({ projectId }: { projectId: string }) {
             아직 메시지가 없습니다. 첫 메시지를 남겨보세요.
           </div>
         ) : (
-          messages.map((m) => <MessageRow key={m.id} m={m} />)
+          messages.map((m) => <MessageRow key={m.id} m={m} onCapture={() => setQnaTarget(m)} />)
         )}
         <div ref={bottomRef} />
       </div>
@@ -175,11 +176,19 @@ export function ChatRoom({ projectId }: { projectId: string }) {
           </button>
         </div>
       </footer>
+
+      {qnaTarget && (
+        <CaptureToQnaModal
+          projectId={projectId}
+          message={qnaTarget}
+          onClose={() => setQnaTarget(null)}
+        />
+      )}
     </div>
   )
 }
 
-function MessageRow({ m }: { m: ChatMessage }) {
+function MessageRow({ m, onCapture }: { m: ChatMessage; onCapture: () => void }) {
   const isSystem = m.authorType === 'SYSTEM'
   const isAgent = m.authorType === 'AGENT'
 
@@ -198,7 +207,7 @@ function MessageRow({ m }: { m: ChatMessage }) {
   const isCommand = m.kind === 'COMMAND'
 
   return (
-    <div className="flex gap-3">
+    <div className="group flex gap-3">
       <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${tone}`}>
         <Avatar size={14} />
       </div>
@@ -211,6 +220,14 @@ function MessageRow({ m }: { m: ChatMessage }) {
             </span>
           )}
           <span className="text-xs text-muted-foreground">{formatTime(m.createdAt)}</span>
+          <button
+            onClick={onCapture}
+            className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/10"
+            title="이 메시지를 Q&A 질문으로 담기"
+          >
+            <HelpCircle size={10} />
+            Q&A로 담기
+          </button>
         </div>
         <div
           className={`text-sm mt-0.5 whitespace-pre-wrap ${
@@ -219,6 +236,109 @@ function MessageRow({ m }: { m: ChatMessage }) {
         >
           {m.body}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function CaptureToQnaModal({
+  projectId,
+  message,
+  onClose,
+}: {
+  projectId: string
+  message: ChatMessage
+  onClose: () => void
+}) {
+  const [question, setQuestion] = useState(message.body)
+  const [priority, setPriority] = useState<'P0' | 'P1' | 'P2' | 'P3'>('P2')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const submit = async () => {
+    if (!question.trim() || submitting) return
+    setSubmitting(true)
+    try {
+      await apiClient.post(`/api/projects/${projectId}/qna`, {
+        question: question.trim(),
+        priority,
+        tags: ['from-chat'],
+      })
+      onClose()
+      alert('Q&A에 저장되었습니다.')
+    } catch {
+      alert('저장에 실패했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <HelpCircle size={16} className="text-rose-600" />
+            <span className="font-semibold text-sm">Q&A로 담기</span>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X size={16} />
+          </button>
+        </header>
+        <div className="p-4 space-y-3">
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium">원본:</span> {message.authorName} · {formatTime(message.createdAt)}
+          </div>
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            rows={5}
+            autoFocus
+            className="w-full px-3 py-2 text-sm border rounded bg-background resize-none"
+            placeholder="질문 내용"
+          />
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-muted-foreground">우선순위:</label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as 'P0' | 'P1' | 'P2' | 'P3')}
+              className="px-2 py-1 text-xs border rounded bg-background"
+            >
+              {(['P0', 'P1', 'P2', 'P3'] as const).map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              태그: <code className="px-1 bg-muted rounded">from-chat</code>
+            </span>
+          </div>
+        </div>
+        <footer className="px-4 py-3 border-t border-border flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm border rounded hover:bg-muted"
+          >
+            취소
+          </button>
+          <button
+            onClick={submit}
+            disabled={!question.trim() || submitting}
+            className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded disabled:opacity-50"
+          >
+            {submitting ? '저장 중...' : 'Q&A에 저장'}
+          </button>
+        </footer>
       </div>
     </div>
   )
