@@ -464,3 +464,14 @@ Recent commits:
 - ad91b45 chore(progress): auto log from ip-172-31-47-35
 
 Uncommitted:  1 file changed, 9 insertions(+)
+
+## 2026-04-21T23:46:57Z · ip-172-31-47-35 · main
+
+Recent commits:
+- 95c4939 chore(progress): auto log from ip-172-31-47-35
+- 2e5289a chore(progress): auto log from ip-172-31-47-35
+- 1a852df chore(progress): auto log from ip-172-31-47-35
+- c2269ab docs: update CHANGELOG_KR with Phase 25-29 entries
+- 393d5f0 feat(api,web): Phase 29 — dashboard KPI enhancement + feedback loop notifications
+
+Uncommitted:  2 files changed, 19 insertions(+), 5 deletions(-)
