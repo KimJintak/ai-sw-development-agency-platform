@@ -153,8 +153,31 @@ model Project {
   chatReads       ChatReadState[]
   documents       ProjectDocument[]
   links           ProjectLink[]
+  credentials     ProjectCredential[]
 
   @@map("projects")
+}
+
+model ProjectCredential {
+  id                String   @id @default(cuid())
+  projectId         String   @map("project_id")
+  role              String
+  label             String
+  email             String
+  encryptedPassword String   @map("encrypted_password")
+  encryptionIv      String   @map("encryption_iv")
+  encryptionTag     String   @map("encryption_tag")
+  loginUrl          String?  @map("login_url")
+  note              String?
+  lastRotatedAt     DateTime? @map("last_rotated_at")
+  createdBy         String?  @map("created_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("project_credentials")
 }
 
 model ProjectLink {

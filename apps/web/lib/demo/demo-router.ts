@@ -12,6 +12,7 @@ import { demoInboxItems } from './data/messages'
 import { demoOpsSummary, demoStalled, demoWatchKeywords, demoFeed } from './data/admin-ops'
 import { getDemoDocuments, getDemoDocument } from './data/documents'
 import { getDemoLinks } from './data/links'
+import { getDemoCredentials, getDemoCredentialPassword } from './data/credentials'
 import {
   getDemoRepo,
   getDemoBranches,
@@ -142,6 +143,13 @@ const routes: RouteHandler[] = [
   { pattern: new RegExp(`^/api/projects/${PID}/links$`), method: 'POST', handler: () => ({ id: 'demo-link-new', success: true }) },
   { pattern: /^\/api\/project-links\/[^/]+$/, method: 'PATCH', handler: () => ({ success: true }) },
   { pattern: /^\/api\/project-links\/[^/]+$/, method: 'DELETE', handler: () => ({ success: true }) },
+
+  // Project Credentials (vault)
+  { pattern: new RegExp(`^/api/projects/${PID}/credentials$`), method: 'GET', handler: (m) => getDemoCredentials(resolveProjectId(m[1])) },
+  { pattern: new RegExp(`^/api/projects/${PID}/credentials$`), method: 'POST', handler: () => ({ id: 'demo-cred-new', success: true }) },
+  { pattern: /^\/api\/project-credentials\/([^/]+)\/reveal$/, method: 'POST', handler: (m) => getDemoCredentialPassword(m[1]) ?? { id: m[1], password: 'demo-pwd-placeholder' } },
+  { pattern: /^\/api\/project-credentials\/[^/]+$/, method: 'PATCH', handler: () => ({ success: true }) },
+  { pattern: /^\/api\/project-credentials\/[^/]+$/, method: 'DELETE', handler: () => ({ success: true }) },
 
   // SCM (Source Control)
   { pattern: new RegExp(`^/api/projects/${PID}/scm/repo$`), handler: (m) => getDemoRepo(resolveProjectId(m[1])) },
