@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { BuildStatus, Platform, Prisma, ReleaseStatus } from '@prisma/client'
+import { BuildStatus, NotificationType, Platform, Prisma, ReleaseStatus } from '@prisma/client'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class ReleasesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ReleasesService.name)
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   listByProject(projectId: string) {
     return this.prisma.release.findMany({
@@ -104,7 +110,38 @@ export class ReleasesService {
     if (input.buildLog) data.buildLog = input.buildLog
     if (input.s3Key) data.s3Key = input.s3Key
     if (input.cloudfrontUrl) data.cloudfrontUrl = input.cloudfrontUrl
-    return this.prisma.build.update({ where: { id: buildId }, data })
+    const updated = await this.prisma.build.update({ where: { id: buildId }, data })
+
+    if (input.status === BuildStatus.SUCCESS) {
+      await this.notifyBuildReady(build.releaseId, build.platform, buildId).catch((err) =>
+        this.logger.warn(`build notify failed: ${(err as Error).message}`),
+      )
+    }
+
+    return updated
+  }
+
+  private async notifyBuildReady(releaseId: string, platform: string, buildId: string) {
+    const release = await this.prisma.release.findUnique({
+      where: { id: releaseId },
+      select: { version: true, projectId: true, project: { select: { customerId: true } } },
+    })
+    if (!release?.project?.customerId) return
+    const portalUsers = await this.prisma.portalUser.findMany({
+      where: { customerId: release.project.customerId },
+      select: { id: true },
+    })
+    await Promise.all(
+      portalUsers.map((u) =>
+        this.notifications.createPortal(
+          u.id,
+          NotificationType.BUILD_READY,
+          `빌드 완료 — ${release.version} (${platform})`,
+          '다운로드 준비가 완료되었습니다.',
+          `/portal/${release.projectId}`,
+        ),
+      ),
+    )
   }
 
   async attachPr(releaseId: string, prNumber: number) {
