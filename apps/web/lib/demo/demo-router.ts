@@ -149,6 +149,7 @@ const routes: RouteHandler[] = [
   { pattern: new RegExp(`^/api/projects/${PID}/qna$`), method: 'GET', handler: (m, params) => getDemoQna(resolveProjectId(m[1]), params?.status) },
   { pattern: new RegExp(`^/api/projects/${PID}/qna$`), method: 'POST', handler: () => ({ id: 'demo-qna-new', success: true }) },
   { pattern: /^\/api\/project-qna\/[^/]+\/answer$/, method: 'POST', handler: () => ({ success: true, status: 'ANSWERED' }) },
+  { pattern: /^\/api\/project-qna\/([^/]+)\/promote$/, method: 'POST', handler: (m) => ({ workItem: { id: 'demo-wi-promoted-' + m[1].slice(-4), title: '[데모] Work Item으로 승격됨' }, qnaId: m[1] }) },
   { pattern: /^\/api\/project-qna\/[^/]+\/status$/, method: 'PATCH', handler: () => ({ success: true }) },
   { pattern: /^\/api\/project-qna\/[^/]+$/, method: 'PATCH', handler: () => ({ success: true }) },
   { pattern: /^\/api\/project-qna\/[^/]+$/, method: 'DELETE', handler: () => ({ success: true }) },

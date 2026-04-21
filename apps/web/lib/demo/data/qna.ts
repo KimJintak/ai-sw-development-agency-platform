@@ -15,6 +15,7 @@ interface DemoQna {
   answeredByName: string | null
   answeredAt: string | null
   tags: string[]
+  workItemId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -33,6 +34,7 @@ const all: DemoQna[] = [
     answeredByName: 'PM 김지훈',
     answeredAt: hours(30),
     tags: ['sync', 'icloud'],
+    workItemId: 'demo-wi-101',
     createdAt: days(2),
     updatedAt: hours(30),
   },
@@ -49,6 +51,7 @@ const all: DemoQna[] = [
     answeredByName: 'PM 김지훈',
     answeredAt: hours(8),
     tags: ['auth'],
+    workItemId: null,
     createdAt: hours(18),
     updatedAt: hours(8),
   },
@@ -65,6 +68,7 @@ const all: DemoQna[] = [
     answeredByName: null,
     answeredAt: null,
     tags: ['widget', 'performance'],
+    workItemId: null,
     createdAt: hours(3),
     updatedAt: hours(3),
   },
@@ -81,6 +85,7 @@ const all: DemoQna[] = [
     answeredByName: null,
     answeredAt: null,
     tags: ['design'],
+    workItemId: null,
     createdAt: hours(1),
     updatedAt: hours(1),
   },

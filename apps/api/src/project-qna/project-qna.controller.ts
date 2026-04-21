@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { Priority, QnaStatus } from '@prisma/client'
+import { Priority, QnaStatus, WorkItemType } from '@prisma/client'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { ProjectQnaService } from './project-qna.service'
@@ -85,5 +85,16 @@ export class ProjectQnaController {
   @ApiOperation({ summary: 'Q&A 삭제' })
   remove(@Param('id') id: string) {
     return this.service.remove(id)
+  }
+
+  @Post('project-qna/:id/promote')
+  @ApiOperation({
+    summary: 'Q&A를 Work Item으로 승격 — 변경 요청 추적용',
+  })
+  promote(
+    @Param('id') id: string,
+    @Body() body: { type?: WorkItemType; title?: string } = {},
+  ) {
+    return this.service.promoteToWorkItem(id, body)
   }
 }

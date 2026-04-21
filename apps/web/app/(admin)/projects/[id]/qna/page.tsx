@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, use, useCallback } from 'react'
+import Link from 'next/link'
 import apiClient from '@/lib/api-client'
 import {
   HelpCircle,
@@ -13,6 +14,8 @@ import {
   CheckCircle2,
   Trash2,
   ChevronDown,
+  Rocket,
+  Kanban,
 } from 'lucide-react'
 
 type Status = 'OPEN' | 'ANSWERED' | 'RESOLVED' | 'PARKED'
@@ -31,6 +34,7 @@ interface Qna {
   answeredByName: string | null
   answeredAt: string | null
   tags: string[]
+  workItemId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -95,6 +99,20 @@ export default function QnaPage({ params }: { params: Promise<{ id: string }> })
     if (!confirm('이 Q&A를 삭제할까요?')) return
     await apiClient.delete(`/api/project-qna/${id}`)
     load()
+  }
+
+  const promote = async (id: string) => {
+    if (!confirm('이 Q&A를 Work Item으로 승격시킬까요?\n\n· 질문 내용이 새 Story WorkItem으로 생성됩니다\n· Q&A 상태가 "해결됨"으로 변경됩니다\n· 생성된 Work Item과 이 Q&A가 양방향 연결됩니다')) return
+    try {
+      const res = await apiClient.post<{ workItem: { id: string; title: string } }>(
+        `/api/project-qna/${id}/promote`,
+      )
+      alert(`Work Item 생성 완료: ${res.data.workItem.title}`)
+      load()
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message
+      alert(`승격 실패: ${msg ?? '알 수 없는 오류'}`)
+    }
   }
 
   const filtered = filter === 'ALL' ? items : items.filter((q) => q.status === filter)
@@ -199,9 +217,29 @@ export default function QnaPage({ params }: { params: Promise<{ id: string }> })
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${priorityTone[q.priority]}`}>
                       {q.priority}
                     </span>
+                    {q.workItemId && (
+                      <Link
+                        href={`/projects/${projectId}`}
+                        className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 inline-flex items-center gap-1 hover:bg-indigo-500/20"
+                        title={`연결된 Work Item: ${q.workItemId}`}
+                      >
+                        <Kanban size={10} />
+                        WI 연결됨
+                      </Link>
+                    )}
                     <span className="text-xs text-muted-foreground ml-auto">
                       {q.askedByName ?? '—'} · {new Date(q.createdAt).toLocaleDateString('ko-KR')}
                     </span>
+                    {!q.workItemId && (
+                      <button
+                        onClick={() => promote(q.id)}
+                        className="text-[10px] px-2 py-0.5 rounded border text-muted-foreground hover:bg-indigo-500/10 hover:text-indigo-700 dark:hover:text-indigo-400 hover:border-indigo-500/30 inline-flex items-center gap-1"
+                        title="Work Item으로 승격"
+                      >
+                        <Rocket size={10} />
+                        작업 생성
+                      </button>
+                    )}
                     <button
                       onClick={() => remove(q.id)}
                       className="text-muted-foreground hover:text-destructive"
