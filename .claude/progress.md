@@ -431,3 +431,14 @@ Recent commits:
 - 24a9ea9 feat(api,web): Phase 26 — QA test run management + FR-07-04 auto-review
 
 Uncommitted:  1 file changed, 9 insertions(+)
+
+## 2026-04-21T23:37:50Z · ip-172-31-47-35 · main
+
+Recent commits:
+- c2269ab docs: update CHANGELOG_KR with Phase 25-29 entries
+- 393d5f0 feat(api,web): Phase 29 — dashboard KPI enhancement + feedback loop notifications
+- ad91b45 chore(progress): auto log from ip-172-31-47-35
+- 4b94172 feat(api,web): Phase 28 — client portal enhancement
+- 7ff3d7b chore(progress): auto log from ip-172-31-47-35
+
+Uncommitted:  1 file changed, 9 insertions(+)
