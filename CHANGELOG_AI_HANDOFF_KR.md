@@ -9,6 +9,52 @@
 
 ## [미출시]
 
+### Phase 29 — 대시보드 KPI 강화 + 피드백 루프 알림
+
+#### 추가
+- **`GET /api/dashboard/stats`** (`apps/api/src/admin/dashboard-stats.controller.ts`) — 11개 병렬 Prisma 쿼리로 종합 통계 반환: 프로젝트(전체/활성), 에이전트(전체/온라인), 피드백(미해결/P0P1), 이번 주 배포, 요구사항 승인 대기, 이번 주 태스크, 최근 피드백 5건, 최근 릴리스 5건.
+- **대시보드 KPI 페이지** (`apps/web/app/(admin)/dashboard/page.tsx`) — 단일 API 호출로 KPI 카드 4개(프로젝트·에이전트·배포), P0/P1 미해결 피드백·요구사항 승인 대기 알럿 행, 최근 피드백/릴리스 2열 리스트, SeverityBadge/StatusDot 헬퍼 컴포넌트.
+- **피드백 → WorkItem 자동생성 알림** (`apps/api/src/feedback/feedback.service.ts`) — P0/P1 피드백에서 WorkItem 자동생성 시 프로젝트 멤버에게 `FEEDBACK_RECEIVED` 인앱 알림 전송.
+
+---
+
+### Phase 28 — 고객 포털 기능 강화
+
+#### 추가
+- **포털 피드백 제출** (`POST /portal/projects/:id/feedback`) — 고객이 포털에서 직접 피드백 제출(source=PORTAL).
+- **포털 릴리스 변경사항** (`GET /portal/projects/:id/releases`) — DEPLOYED/APPROVED/DEPLOYING 릴리스 + 포함 Work Item 목록.
+- **포털 프로젝트 상세** 7탭 재구성(개요/요구사항/변경사항/빌드/Q&A/피드백/납품보고서), Gherkin 명세 접기/펼치기, 릴리스 Work Item 접기/펼치기, 피드백 제출 폼.
+
+---
+
+### Phase 27 — 릴리스/배포 관리 개선
+
+#### 추가
+- **빌드 성공 시 포털 알림** — `status → SUCCESS` 전환 시 해당 프로젝트 고객에게 `BUILD_READY` 포털 알림 자동 전송.
+- **릴리스 페이지 전면 재작성** — 릴리스/배포이력 탭 구조; 플랫폼 멀티선택 토글; Work Item 추가/제거(DRAFT 전용); PR 링커 접기/펼치기.
+
+---
+
+### Phase 26 — QA 테스트 런 관리
+
+#### 추가
+- **`GET /qa/project-runs/:projectId`** — 프로젝트 전체 테스트 런 조회(릴리스 경유 join).
+- **FR-07-04** — 테스트 FAILED 시 연결된 WorkItem 자동 REVIEW 상태 전환.
+- **QA 페이지 2탭** (테스트 케이스 / 테스트 런) — 릴리스+플랫폼 선택 후 런 생성, PENDING→RUNNING→COMPLETED 상태 흐름, 인라인 결과 기록 컴포넌트.
+
+---
+
+### Phase 25 — 인앱 알림 센터
+
+#### 추가
+- **`Notification` / `PortalNotification` 모델** + `NotificationType` 열거형 (Prisma 스키마).
+- **`NotificationsService`** — create, 사용자별 조회, 미읽음 수, 읽음 처리(단건/전체), 포털 변형 포함. `@Global()` 모듈로 등록.
+- **알림 API** — `GET/PATCH /notifications`, `GET /notifications/unread-count`; 포털 동일 경로 `/portal/notifications`.
+- **알림 벨 UI** — 관리 콘솔 사이드바, 포털 헤더에 벨 아이콘 + 드롭다운, 30초 폴링, 클릭 시 읽음 처리.
+- **자동 알림 트리거** — 에이전트 태스크 완료, 요구사항 승인 요청, Q&A 답변 등록, P0/P1 피드백 WorkItem 생성 시 알림 발송.
+
+---
+
 ### 에이전트 통신 — 신뢰성·관찰성 보강
 
 #### 추가
