@@ -13,6 +13,7 @@ import { demoOpsSummary, demoStalled, demoWatchKeywords, demoFeed } from './data
 import { getDemoDocuments, getDemoDocument } from './data/documents'
 import { getDemoLinks } from './data/links'
 import { getDemoCredentials, getDemoCredentialPassword } from './data/credentials'
+import { getDemoQna } from './data/qna'
 import {
   getDemoRepo,
   getDemoBranches,
@@ -143,6 +144,14 @@ const routes: RouteHandler[] = [
   { pattern: new RegExp(`^/api/projects/${PID}/links$`), method: 'POST', handler: () => ({ id: 'demo-link-new', success: true }) },
   { pattern: /^\/api\/project-links\/[^/]+$/, method: 'PATCH', handler: () => ({ success: true }) },
   { pattern: /^\/api\/project-links\/[^/]+$/, method: 'DELETE', handler: () => ({ success: true }) },
+
+  // Project Q&A
+  { pattern: new RegExp(`^/api/projects/${PID}/qna$`), method: 'GET', handler: (m, params) => getDemoQna(resolveProjectId(m[1]), params?.status) },
+  { pattern: new RegExp(`^/api/projects/${PID}/qna$`), method: 'POST', handler: () => ({ id: 'demo-qna-new', success: true }) },
+  { pattern: /^\/api\/project-qna\/[^/]+\/answer$/, method: 'POST', handler: () => ({ success: true, status: 'ANSWERED' }) },
+  { pattern: /^\/api\/project-qna\/[^/]+\/status$/, method: 'PATCH', handler: () => ({ success: true }) },
+  { pattern: /^\/api\/project-qna\/[^/]+$/, method: 'PATCH', handler: () => ({ success: true }) },
+  { pattern: /^\/api\/project-qna\/[^/]+$/, method: 'DELETE', handler: () => ({ success: true }) },
 
   // Project Credentials (vault)
   { pattern: new RegExp(`^/api/projects/${PID}/credentials$`), method: 'GET', handler: (m) => getDemoCredentials(resolveProjectId(m[1])) },

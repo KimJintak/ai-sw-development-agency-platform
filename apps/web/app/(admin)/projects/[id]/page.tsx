@@ -14,6 +14,7 @@ import {
   Rocket,
   Files,
   GitPullRequest,
+  HelpCircle,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { LinkHub } from '@/components/project/link-hub'
@@ -133,6 +134,7 @@ const SUB_NAV: { label: string; href: string; icon: typeof Kanban; tone: keyof t
   { label: 'Chat', href: '/chat', icon: MessagesSquare, tone: 'sky' },
   { label: 'Feedback', href: '/feedback', icon: Inbox, tone: 'rose' },
   { label: 'Documents', href: '/documents', icon: Files, tone: 'teal' },
+  { label: 'Q&A', href: '/qna', icon: HelpCircle, tone: 'rose' },
   { label: 'Source', href: '/source', icon: GitPullRequest, tone: 'fuchsia' },
   { label: 'Releases', href: '/releases', icon: Rocket, tone: 'indigo' },
 ]

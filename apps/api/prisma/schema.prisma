@@ -154,8 +154,38 @@ model Project {
   documents       ProjectDocument[]
   links           ProjectLink[]
   credentials     ProjectCredential[]
+  qnas            ProjectQna[]
 
   @@map("projects")
+}
+
+model ProjectQna {
+  id           String       @id @default(cuid())
+  projectId    String       @map("project_id")
+  question     String
+  answer       String?
+  status       QnaStatus    @default(OPEN)
+  priority     Priority     @default(P2)
+  askedBy      String?      @map("asked_by")
+  askedByName  String?      @map("asked_by_name")
+  answeredBy   String?      @map("answered_by")
+  answeredByName String?    @map("answered_by_name")
+  answeredAt   DateTime?    @map("answered_at")
+  tags         String[]     @default([])
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status, createdAt])
+  @@map("project_qnas")
+}
+
+enum QnaStatus {
+  OPEN
+  ANSWERED
+  RESOLVED
+  PARKED
 }
 
 model ProjectCredential {

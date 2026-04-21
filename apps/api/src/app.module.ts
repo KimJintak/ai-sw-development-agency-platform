@@ -22,6 +22,7 @@ import { LlmModule } from './llm/llm.module'
 import { ScmModule } from './scm/scm.module'
 import { ProjectLinksModule } from './project-links/project-links.module'
 import { ProjectCredentialsModule } from './project-credentials/project-credentials.module'
+import { ProjectQnaModule } from './project-qna/project-qna.module'
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ProjectCredentialsModule } from './project-credentials/project-credenti
     ScmModule,
     ProjectLinksModule,
     ProjectCredentialsModule,
+    ProjectQnaModule,
   ],
 })
 export class AppModule {}
