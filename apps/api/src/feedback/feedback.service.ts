@@ -3,11 +3,13 @@ import {
   FeedbackSource,
   FeedbackStatus,
   FeedbackType,
+  NotificationType,
   Priority,
   Prisma,
   WorkItemStatus,
 } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 export interface CreateFeedbackInput {
   projectId: string
@@ -27,7 +29,10 @@ export interface ActorContext {
 export class FeedbackService {
   private readonly logger = new Logger(FeedbackService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   list(projectId: string, opts: { status?: FeedbackStatus; limit?: number } = {}) {
     return this.prisma.feedback.findMany({
@@ -235,8 +240,36 @@ export class FeedbackService {
         reason: `WorkItem 자동 생성 (${fb.severity})`,
       })
       this.logger.log(`Auto-created WorkItem ${workItem.id} for feedback ${fb.id} (${fb.severity})`)
+      await this.notifyProjectMembers(fb.projectId, fb.title, fb.severity, workItem.id)
     } catch (err) {
       this.logger.error(`Auto-create WorkItem failed for feedback ${fb.id}: ${(err as Error).message}`)
+    }
+  }
+
+  private async notifyProjectMembers(
+    projectId: string,
+    feedbackTitle: string,
+    severity: Priority | null,
+    workItemId: string,
+  ) {
+    try {
+      const members = await this.prisma.projectMember.findMany({
+        where: { projectId },
+        select: { userId: true },
+      })
+      await Promise.all(
+        members.map((m) =>
+          this.notifications.create(
+            m.userId,
+            NotificationType.FEEDBACK_RECEIVED,
+            `[${severity ?? 'P2'}] 피드백 → Work Item 자동 생성`,
+            feedbackTitle,
+            `/projects/${projectId}/wbs`,
+          ),
+        ),
+      )
+    } catch (err) {
+      this.logger.warn(`feedback notify failed: ${(err as Error).message}`)
     }
   }
 }

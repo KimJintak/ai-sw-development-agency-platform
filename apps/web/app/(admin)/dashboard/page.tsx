@@ -4,41 +4,39 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import apiClient from '@/lib/api-client'
 import { useI18n } from '@/lib/i18n/i18n-context'
-import type { Project, AgentCard } from 'shared-types'
-import { ProjectStatus, AgentStatus } from 'shared-types'
 import {
-  FolderKanban,
-  Activity,
-  Bot,
-  CheckCircle2,
-  TrendingUp,
-  ArrowUpRight,
-  Sparkles,
-  Clock,
+  FolderKanban, Activity, Bot, CheckCircle2, TrendingUp, ArrowUpRight,
+  Sparkles, Clock, MessageSquare, Rocket, FileText, AlertTriangle,
 } from 'lucide-react'
+
+interface DashboardStats {
+  projects: { total: number; active: number }
+  agents: { total: number; online: number }
+  feedback: { unresolved: number; criticalOpen: number }
+  releases: { thisWeek: number }
+  requirements: { pendingApproval: number }
+  tasks: { thisWeek: number }
+  recentFeedback: {
+    id: string; title: string; severity: string | null; type: string | null
+    status: string; createdAt: string; workItemId: string | null
+    project: { id: string; name: string }
+  }[]
+  recentReleases: {
+    id: string; version: string; deployedAt: string | null; platforms: string[]
+    project: { id: string; name: string }
+  }[]
+}
 
 export default function DashboardPage() {
   const { t } = useI18n()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [agents, setAgents] = useState<AgentCard[]>([])
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      apiClient.get('/api/projects').then((r) => setProjects(r.data)),
-      apiClient.get('/api/agents').then((r) => setAgents(r.data)),
-    ]).finally(() => setLoading(false))
+    apiClient.get<DashboardStats>('/api/dashboard/stats')
+      .then((r) => setStats(r.data))
+      .finally(() => setLoading(false))
   }, [])
-
-  const active = projects.filter((p) => p.status === ProjectStatus.ACTIVE).length
-  const online = agents.filter((a) => a.status === AgentStatus.ONLINE).length
-  const completionRate =
-    projects.length > 0
-      ? Math.round(
-          (projects.filter((p) => p.status === ProjectStatus.COMPLETED).length / projects.length) *
-            100,
-        )
-      : 0
 
   return (
     <div className="space-y-8">
@@ -49,9 +47,7 @@ export default function DashboardPage() {
             <span>{t('dashboard.welcome')}</span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('dashboard.subtitle')}
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <Link
           href="/projects"
@@ -61,141 +57,162 @@ export default function DashboardPage() {
         </Link>
       </header>
 
+      {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={<FolderKanban size={18} />}
-          label={t('dashboard.stat.totalProjects')}
-          value={projects.length}
-          tone="blue"
-          loading={loading}
-        />
-        <StatCard
-          icon={<Activity size={18} />}
-          label={t('dashboard.stat.activeProjects')}
-          value={active}
-          tone="emerald"
-          loading={loading}
-        />
-        <StatCard
-          icon={<Bot size={18} />}
-          label={t('dashboard.stat.totalAgents')}
-          value={agents.length}
-          tone="violet"
-          loading={loading}
-        />
-        <StatCard
-          icon={<CheckCircle2 size={18} />}
-          label={t('dashboard.stat.onlineAgents')}
-          value={online}
-          delta={agents.length > 0 ? `${Math.round((online / agents.length) * 100)}%` : '0%'}
-          tone="amber"
-          loading={loading}
-        />
+        <StatCard icon={<FolderKanban size={18} />} label={t('dashboard.stat.totalProjects')}
+          value={stats?.projects.total ?? 0} tone="blue" loading={loading} />
+        <StatCard icon={<Activity size={18} />} label={t('dashboard.stat.activeProjects')}
+          value={stats?.projects.active ?? 0} tone="emerald" loading={loading} />
+        <StatCard icon={<Bot size={18} />} label={t('dashboard.stat.onlineAgents')}
+          value={stats?.agents.online ?? 0}
+          delta={stats ? `/ ${stats.agents.total}` : undefined}
+          tone="violet" loading={loading} />
+        <StatCard icon={<Rocket size={18} />} label="이번 주 배포"
+          value={stats?.releases.thisWeek ?? 0} tone="amber" loading={loading} />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden">
-          <header className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <div>
-              <h2 className="font-semibold">{t('dashboard.recentProjects')}</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{t('dashboard.recentProjectsDesc')}</p>
-            </div>
-            <Link href="/projects" className="text-xs text-primary hover:underline">
-              {t('dashboard.viewAll')} →
+      {/* Alert row */}
+      {stats && (stats.feedback.criticalOpen > 0 || stats.requirements.pendingApproval > 0) && (
+        <div className="flex flex-wrap gap-3">
+          {stats.feedback.criticalOpen > 0 && (
+            <Link href="/feedback"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400 hover:opacity-90">
+              <AlertTriangle size={14} />
+              <span>P0/P1 미해결 피드백 <strong>{stats.feedback.criticalOpen}건</strong></span>
             </Link>
+          )}
+          {stats.requirements.pendingApproval > 0 && (
+            <Link href="/projects"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-700 dark:text-amber-400 hover:opacity-90">
+              <FileText size={14} />
+              <span>요구사항 승인 대기 <strong>{stats.requirements.pendingApproval}건</strong></span>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Main grid */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Recent Feedback */}
+        <section className="bg-card border rounded-xl overflow-hidden">
+          <header className="flex items-center justify-between px-5 py-4 border-b">
+            <div>
+              <h2 className="font-semibold flex items-center gap-2"><MessageSquare size={14} /> 최근 피드백</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">이번 주 수신 {stats?.recentFeedback.length ?? 0}건</p>
+            </div>
+            <Link href="/feedback" className="text-xs text-primary hover:underline">전체 보기 →</Link>
           </header>
-          <ul className="divide-y divide-border">
-            {loading ? (
-              <SkeletonRow />
-            ) : projects.length === 0 ? (
-              <li className="p-8 text-center text-sm text-muted-foreground">
-                {t('dashboard.noProjects')}
-              </li>
+          <ul className="divide-y">
+            {loading ? <SkeletonRow /> : stats?.recentFeedback.length === 0 ? (
+              <li className="p-8 text-center text-sm text-muted-foreground">이번 주 피드백 없음</li>
             ) : (
-              projects.slice(0, 6).map((p) => <ProjectRow key={p.id} p={p} />)
+              stats?.recentFeedback.map((fb) => (
+                <li key={fb.id}>
+                  <Link href={`/projects/${fb.project.id}/feedback`}
+                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors group">
+                    <SeverityBadge severity={fb.severity} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate group-hover:text-primary">{fb.title}</div>
+                      <div className="text-xs text-muted-foreground">{fb.project.name}</div>
+                    </div>
+                    {fb.workItemId && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 shrink-0">WI 생성됨</span>
+                    )}
+                    <StatusDot status={fb.status} />
+                  </Link>
+                </li>
+              ))
             )}
           </ul>
         </section>
 
-        <section className="bg-card border border-border rounded-xl overflow-hidden">
-          <header className="px-5 py-4 border-b border-border">
-            <h2 className="font-semibold">{t('dashboard.agentStatus')}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {online} / {agents.length} {t('dashboard.online')}
-            </p>
+        {/* Recent Releases */}
+        <section className="bg-card border rounded-xl overflow-hidden">
+          <header className="flex items-center justify-between px-5 py-4 border-b">
+            <div>
+              <h2 className="font-semibold flex items-center gap-2"><Rocket size={14} /> 최근 배포</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">배포 완료 릴리스</p>
+            </div>
           </header>
-          <ul className="divide-y divide-border max-h-[400px] overflow-y-auto">
-            {loading ? (
-              <SkeletonRow />
-            ) : agents.length === 0 ? (
-              <li className="p-8 text-center text-sm text-muted-foreground">
-                {t('dashboard.noAgents')}
-              </li>
+          <ul className="divide-y">
+            {loading ? <SkeletonRow /> : stats?.recentReleases.length === 0 ? (
+              <li className="p-8 text-center text-sm text-muted-foreground">배포된 릴리스 없음</li>
             ) : (
-              agents.map((a) => <AgentRow key={a.id} a={a} />)
+              stats?.recentReleases.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/projects/${r.project.id}/releases`}
+                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors group">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Rocket size={14} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm group-hover:text-primary">{r.project.name} — {r.version}</div>
+                      <div className="text-xs text-muted-foreground">{r.platforms.join(', ')}</div>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {r.deployedAt
+                        ? new Date(r.deployedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+                        : '—'}
+                    </span>
+                  </Link>
+                </li>
+              ))
             )}
           </ul>
         </section>
       </div>
 
-      <section className="bg-gradient-to-br from-primary/5 via-transparent to-violet-500/5 border border-border rounded-xl p-6">
-        <div className="flex items-start gap-4">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <TrendingUp size={20} />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold">{t('dashboard.completionRate')} {completionRate}%</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t('dashboard.completionDetail')
-                .replace('{total}', String(projects.length))
-                .replace('{done}', String(projects.filter((p) => p.status === ProjectStatus.COMPLETED).length))}
-            </p>
-            <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-primary to-violet-500 transition-all"
-                style={{ width: `${completionRate}%` }}
-              />
+      {/* Completion rate */}
+      {stats && (
+        <section className="bg-gradient-to-br from-primary/5 via-transparent to-violet-500/5 border rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <TrendingUp size={20} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-semibold">{t('dashboard.completionRate')}</h3>
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><CheckCircle2 size={11} className="text-green-500" /> 활성 {stats.projects.active}개</span>
+                  <span className="flex items-center gap-1"><MessageSquare size={11} className="text-amber-500" /> 미해결 피드백 {stats.feedback.unresolved}건</span>
+                  <span className="flex items-center gap-1"><Clock size={11} className="text-blue-500" /> 이번 주 태스크 {stats.tasks.thisWeek}건</span>
+                </div>
+              </div>
+              <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-violet-500 transition-all"
+                  style={{
+                    width: `${stats.projects.total > 0
+                      ? Math.round((stats.projects.active / stats.projects.total) * 100)
+                      : 0}%`,
+                  }}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   )
 }
 
 function StatCard({
-  icon,
-  label,
-  value,
-  delta,
-  tone,
-  loading,
+  icon, label, value, delta, tone, loading,
 }: {
-  icon: React.ReactNode
-  label: string
-  value: number | string
-  delta?: string
-  tone: 'blue' | 'emerald' | 'violet' | 'amber'
-  loading?: boolean
+  icon: React.ReactNode; label: string; value: number; delta?: string
+  tone: 'blue' | 'emerald' | 'violet' | 'amber'; loading?: boolean
 }) {
   const tones = {
     blue: 'from-blue-500/10 to-blue-500/0 text-blue-600 dark:text-blue-400 border-blue-500/20',
-    emerald:
-      'from-emerald-500/10 to-emerald-500/0 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-    violet:
-      'from-violet-500/10 to-violet-500/0 text-violet-600 dark:text-violet-400 border-violet-500/20',
-    amber:
-      'from-amber-500/10 to-amber-500/0 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    emerald: 'from-emerald-500/10 to-emerald-500/0 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    violet: 'from-violet-500/10 to-violet-500/0 text-violet-600 dark:text-violet-400 border-violet-500/20',
+    amber: 'from-amber-500/10 to-amber-500/0 text-amber-600 dark:text-amber-400 border-amber-500/20',
   }
   return (
     <div className={`relative overflow-hidden rounded-xl border bg-gradient-to-br ${tones[tone]} bg-card p-5`}>
       <div className="flex items-center justify-between mb-3">
         <span className="opacity-90">{icon}</span>
-        {delta && (
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-background/60 text-foreground">
-            {delta}
-          </span>
-        )}
+        {delta && <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-background/60">{delta}</span>}
       </div>
       <div className="text-3xl font-bold tracking-tight text-foreground">
         {loading ? <span className="inline-block h-8 w-12 bg-muted rounded animate-pulse" /> : value}
@@ -205,66 +222,21 @@ function StatCard({
   )
 }
 
-function ProjectRow({ p }: { p: Project }) {
-  const statusColor: Record<string, string> = {
-    ACTIVE: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    COMPLETED: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-    ON_HOLD: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    ARCHIVED: 'bg-slate-500/10 text-muted-foreground',
+function SeverityBadge({ severity }: { severity: string | null }) {
+  const colors: Record<string, string> = {
+    P0: 'bg-red-100 text-red-700', P1: 'bg-orange-100 text-orange-700',
+    P2: 'bg-yellow-100 text-yellow-700', P3: 'bg-slate-100 text-slate-600',
   }
   return (
-    <li>
-      <Link
-        href={`/projects/${p.id}`}
-        className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-muted/40 transition-colors group"
-      >
-        <div className="min-w-0 flex-1">
-          <div className="font-medium truncate group-hover:text-primary transition-colors">
-            {p.name}
-          </div>
-          {p.description && (
-            <div className="text-xs text-muted-foreground truncate mt-0.5">{p.description}</div>
-          )}
-        </div>
-        <span
-          className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
-            statusColor[p.status] ?? 'bg-muted'
-          }`}
-        >
-          {p.status}
-        </span>
-      </Link>
-    </li>
+    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${colors[severity ?? 'P3'] ?? 'bg-muted'}`}>
+      {severity ?? 'P3'}
+    </span>
   )
 }
 
-function AgentRow({ a }: { a: AgentCard }) {
-  const isOnline = a.status === AgentStatus.ONLINE
-  return (
-    <li className="flex items-center justify-between px-5 py-3 text-sm">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <span
-          className={`h-2 w-2 rounded-full shrink-0 ${
-            isOnline
-              ? 'bg-emerald-500 shadow-[0_0_8px] shadow-emerald-500/50'
-              : 'bg-muted-foreground/40'
-          }`}
-        />
-        <div className="min-w-0">
-          <div className="font-medium truncate">{a.name}</div>
-          <div className="text-[10px] text-muted-foreground">{a.agentType}</div>
-        </div>
-      </div>
-      <span
-        className={`text-[10px] flex items-center gap-1 ${
-          isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
-        }`}
-      >
-        {!isOnline && <Clock size={10} />}
-        {a.status}
-      </span>
-    </li>
-  )
+function StatusDot({ status }: { status: string }) {
+  const color = status === 'RESOLVED' ? 'bg-green-500' : status === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-amber-500'
+  return <span className={`h-2 w-2 rounded-full shrink-0 ${color}`} />
 }
 
 function SkeletonRow() {
