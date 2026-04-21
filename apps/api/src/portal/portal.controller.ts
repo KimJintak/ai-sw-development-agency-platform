@@ -119,4 +119,20 @@ export class PortalController {
       name: user.name ?? user.email,
     })
   }
+
+  @Post('projects/:id/feedback')
+  @ApiOperation({ summary: '피드백 제출 (버그/요청/기타)' })
+  submitFeedback(
+    @CurrentUser() user: PortalUser,
+    @Param('id') id: string,
+    @Body() body: { title: string; body: string },
+  ) {
+    return this.service.submitFeedback(user.customerId, id, body)
+  }
+
+  @Get('projects/:id/releases')
+  @ApiOperation({ summary: '릴리스 변경사항 목록 (고객사 뷰)' })
+  releaseChangelog(@CurrentUser() user: PortalUser, @Param('id') id: string) {
+    return this.service.releaseChangelog(user.customerId, id)
+  }
 }

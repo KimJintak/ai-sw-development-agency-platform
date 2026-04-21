@@ -79,6 +79,7 @@ export class PortalService {
         status: true,
         version: true,
         platforms: true,
+        featureFile: true,
         updatedAt: true,
       },
       orderBy: { updatedAt: 'desc' },
@@ -201,6 +202,42 @@ export class PortalService {
         askedBy: portalUser.id,
         askedByName: `${portalUser.name} (고객)`,
         status: 'OPEN',
+      },
+    })
+  }
+
+  async submitFeedback(
+    customerId: string,
+    projectId: string,
+    input: { title: string; body: string },
+  ) {
+    await this.assertOwnership(customerId, projectId)
+    return this.prisma.feedback.create({
+      data: {
+        projectId,
+        source: 'PORTAL',
+        title: input.title,
+        body: input.body,
+        status: 'NEW',
+      },
+    })
+  }
+
+  async releaseChangelog(customerId: string, projectId: string) {
+    await this.assertOwnership(customerId, projectId)
+    return this.prisma.release.findMany({
+      where: { projectId, status: { in: ['DEPLOYED', 'APPROVED', 'DEPLOYING'] } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        version: true,
+        title: true,
+        status: true,
+        platforms: true,
+        deployedAt: true,
+        releaseItems: {
+          select: { workItem: { select: { id: true, title: true, type: true, status: true } } },
+        },
       },
     })
   }
