@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phase 24 — Woojoo CRM end-to-end validation
+- Real Woojoo CRM Phase 1 project projected onto the platform via API:
+  - Woojoo Energy customer + Woojoo CRM — Phase 1 project.
+  - 6 external links (WBS / Prototype / SRS / Figma / Staging / Q&A) registered.
+  - 3 encrypted test credentials (Super Admin / Brand Owner / Gas Station Owner).
+- Verified: masked listing, AES-GCM reveal, audit logging on reveal, iframe
+  preview rendering the real `woojoo-crm.figma.site` login screen inside the
+  project page.
+
+### Phase 23 — Inline iframe preview for project links
+- PreviewModal component: full-screen overlay with category tag, label, URL
+  preview, sandboxed iframe body, and toolbar (new-tab jump, fullscreen toggle,
+  close on X / Esc / backdrop click).
+- LinkHub: eye icon opens the modal for FIGMA / PROTOTYPE / STAGING / PRODUCTION
+  / DOCS categories. Non-embeddable categories (WBS / QA_SHEET / REPO) get the
+  external jump link only.
+- Sandbox attrs: `allow-scripts allow-same-origin allow-forms allow-popups
+  allow-popups-to-escape-sandbox allow-presentation`. Permanent amber banner
+  notes that some sites (GitHub, Notion, Docs) block framing via
+  X-Frame-Options and will appear blank.
+
+### Phase 22 — Encrypted project credentials vault
+- `ProjectCredential` model with AES-256-GCM encrypted passwords (`encryptedPassword` + `encryptionIv` + `encryptionTag` columns). Role / label / email / loginUrl / note / lastRotatedAt / createdBy metadata kept in clear.
+- `CredentialCryptoService`: master key derived via SHA-256 from `CREDENTIALS_KEY` (or `JWT_SECRET` fallback).
+- REST:
+  - `GET /projects/:id/credentials` — ADMIN/PM (masked, no password field)
+  - `POST /projects/:id/credentials` — ADMIN
+  - `PATCH/DELETE /project-credentials/:id` — ADMIN
+  - `POST /project-credentials/:id/reveal` — ADMIN/PM; records `project.credential.reveal` in AdminAuditLog with IP + user-agent
+- Web `CredentialsVault`: card section above project sub-nav. Masked password with eye-toggle reveal, clipboard copy for email + password, login URL jump, rotate-date display, ADMIN-only add/delete controls, PM read-only with reveal.
+
+### Phase 21 — External link hub on project page
+- `ProjectLink` model + `ProjectLinkCategory` enum (FIGMA / PROTOTYPE / WBS / SRS / STAGING / PRODUCTION / DOCS / REPO / QA_SHEET / OTHER). Cascade on project delete, indexed by (projectId, sortOrder).
+- REST: GET/POST/PATCH/DELETE + POST `/:projectId/links/reorder` (bulk sortOrder).
+- Web `LinkHub`: 3-column card grid above the project sub-nav. Category-tinted icons (Figma pink, Prototype violet, WBS blue, SRS emerald, Staging amber, etc.), clickable label, description, hover-reveal delete. Inline add form with category dropdown.
+- Demo data: 10 sample links across 2 demo projects.
+
+---
+
 ### Agent communication — reliability + observability
 - Callback Outbox (`apps/orchestrator/lib/orchestrator/callback_outbox.ex`, `.../callback_outbox/worker.ex`, migration `20260420030000_create_callback_outbox`) — replaces the fire-and-forget `Req.post` in `TaskCallback` with an Ecto persistent outbox. Worker drains `pending` rows with exponential backoff (5s · 10s · 20s · … up to 640s + jitter) up to 8 attempts, then marks `dead`. API downtime no longer drops agent events.
 - End-to-end `correlation_id` — threaded through NestJS `agents.service` → Redis → Orchestrator (`RedisConsumer` → `TaskDispatcher` → `AgentChannel`) → `agent-client` → callbacks (`X-Correlation-Id` header + body field). Makes multi-agent flows greppable across logs.
