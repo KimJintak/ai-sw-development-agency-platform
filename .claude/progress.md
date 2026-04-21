@@ -255,3 +255,14 @@ Recent commits:
 - da01d72 feat(web): Phase 23 — inline iframe preview for project links
 
 Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
+
+## 2026-04-21T00:52:08Z · ip-172-31-47-35 · main
+
+Recent commits:
+- e11382e feat(api,web): promote Q&A to Work Item — bidirectional link
+- ae64b1a chore(progress): auto log from ip-172-31-47-35
+- a1832d5 feat(api,web): Q&A structured tracker — question/answer pairs per project
+- 9b88c0b docs(changelog): backfill English changelog for Phase 21-24
+- a6a42ab chore(progress): auto log from ip-172-31-47-35
+
+Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
