@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import apiClient from '@/lib/api-client'
+import { useI18n } from '@/lib/i18n/i18n-context'
 import type { Project, AgentCard } from 'shared-types'
 import { ProjectStatus, AgentStatus } from 'shared-types'
 import {
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react'
 
 export default function DashboardPage() {
+  const { t } = useI18n()
   const [projects, setProjects] = useState<Project[]>([])
   const [agents, setAgents] = useState<AgentCard[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,46 +46,46 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
             <Sparkles size={12} className="text-primary" />
-            <span>Welcome back</span>
+            <span>{t('dashboard.welcome')}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            전체 프로젝트와 에이전트의 운영 현황을 한눈에 파악합니다.
+            {t('dashboard.subtitle')}
           </p>
         </div>
         <Link
           href="/projects"
           className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:opacity-90 transition-opacity"
         >
-          새 프로젝트 <ArrowUpRight size={14} />
+          {t('dashboard.newProject')} <ArrowUpRight size={14} />
         </Link>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<FolderKanban size={18} />}
-          label="전체 프로젝트"
+          label={t('dashboard.stat.totalProjects')}
           value={projects.length}
           tone="blue"
           loading={loading}
         />
         <StatCard
           icon={<Activity size={18} />}
-          label="활성 프로젝트"
+          label={t('dashboard.stat.activeProjects')}
           value={active}
           tone="emerald"
           loading={loading}
         />
         <StatCard
           icon={<Bot size={18} />}
-          label="등록 에이전트"
+          label={t('dashboard.stat.totalAgents')}
           value={agents.length}
           tone="violet"
           loading={loading}
         />
         <StatCard
           icon={<CheckCircle2 size={18} />}
-          label="온라인 에이전트"
+          label={t('dashboard.stat.onlineAgents')}
           value={online}
           delta={agents.length > 0 ? `${Math.round((online / agents.length) * 100)}%` : '0%'}
           tone="amber"
@@ -95,11 +97,11 @@ export default function DashboardPage() {
         <section className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden">
           <header className="flex items-center justify-between px-5 py-4 border-b border-border">
             <div>
-              <h2 className="font-semibold">최근 프로젝트</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">최신 등록 순</p>
+              <h2 className="font-semibold">{t('dashboard.recentProjects')}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{t('dashboard.recentProjectsDesc')}</p>
             </div>
             <Link href="/projects" className="text-xs text-primary hover:underline">
-              전체 보기 →
+              {t('dashboard.viewAll')} →
             </Link>
           </header>
           <ul className="divide-y divide-border">
@@ -107,7 +109,7 @@ export default function DashboardPage() {
               <SkeletonRow />
             ) : projects.length === 0 ? (
               <li className="p-8 text-center text-sm text-muted-foreground">
-                아직 등록된 프로젝트가 없습니다.
+                {t('dashboard.noProjects')}
               </li>
             ) : (
               projects.slice(0, 6).map((p) => <ProjectRow key={p.id} p={p} />)
@@ -117,9 +119,9 @@ export default function DashboardPage() {
 
         <section className="bg-card border border-border rounded-xl overflow-hidden">
           <header className="px-5 py-4 border-b border-border">
-            <h2 className="font-semibold">에이전트 상태</h2>
+            <h2 className="font-semibold">{t('dashboard.agentStatus')}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {online} / {agents.length} 온라인
+              {online} / {agents.length} {t('dashboard.online')}
             </p>
           </header>
           <ul className="divide-y divide-border max-h-[400px] overflow-y-auto">
@@ -127,7 +129,7 @@ export default function DashboardPage() {
               <SkeletonRow />
             ) : agents.length === 0 ? (
               <li className="p-8 text-center text-sm text-muted-foreground">
-                등록된 에이전트가 없습니다.
+                {t('dashboard.noAgents')}
               </li>
             ) : (
               agents.map((a) => <AgentRow key={a.id} a={a} />)
@@ -142,10 +144,11 @@ export default function DashboardPage() {
             <TrendingUp size={20} />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold">완료율 {completionRate}%</h3>
+            <h3 className="font-semibold">{t('dashboard.completionRate')} {completionRate}%</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              전체 {projects.length}개 프로젝트 중{' '}
-              {projects.filter((p) => p.status === ProjectStatus.COMPLETED).length}개 완료.
+              {t('dashboard.completionDetail')
+                .replace('{total}', String(projects.length))
+                .replace('{done}', String(projects.filter((p) => p.status === ProjectStatus.COMPLETED).length))}
             </p>
             <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
               <div

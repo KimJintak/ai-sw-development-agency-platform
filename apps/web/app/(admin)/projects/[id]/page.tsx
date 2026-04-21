@@ -18,6 +18,7 @@ import {
   ListTree,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
+import { useI18n } from '@/lib/i18n/i18n-context'
 import { LinkHub } from '@/components/project/link-hub'
 import { CredentialsVault } from '@/components/project/credentials-vault'
 import type { Project, WorkItem } from 'shared-types'
@@ -142,6 +143,7 @@ const SUB_NAV: { label: string; href: string; icon: typeof Kanban; tone: keyof t
 ]
 
 export default function ProjectDetailPage() {
+  const { t } = useI18n()
   const { id } = useParams<{ id: string }>()
   const pathname = usePathname()
   const [project, setProject] = useState<Project | null>(null)
@@ -174,14 +176,14 @@ export default function ProjectDetailPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 shadow-sm"
           >
             <MessageSquare size={15} />
-            대화방 열기
+            {t('project.openChat')}
           </Link>
           <Link
             href={`${base}/feedback`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md border text-sm font-medium hover:bg-muted"
           >
             <Inbox size={15} />
-            피드백
+            {t('project.feedback')}
           </Link>
         </div>
       </div>

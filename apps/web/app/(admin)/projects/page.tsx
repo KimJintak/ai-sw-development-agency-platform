@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import apiClient from '@/lib/api-client'
+import { useI18n } from '@/lib/i18n/i18n-context'
 import type { Project } from 'shared-types'
 
 interface Customer {
@@ -13,6 +14,7 @@ interface Customer {
 const PLATFORMS = ['MACOS', 'WINDOWS', 'IOS', 'ANDROID', 'WEB', 'LINUX'] as const
 
 export default function ProjectsPage() {
+  const { t } = useI18n()
   const [projects, setProjects] = useState<Project[]>([])
   const [showForm, setShowForm] = useState(false)
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -58,12 +60,12 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Projects</h1>
+        <h1 className="text-2xl font-bold">{t('projects.title')}</h1>
         <button
           onClick={() => showForm ? setShowForm(false) : openForm()}
           className="bg-primary text-primary-foreground text-sm px-4 py-2 rounded-md hover:opacity-90"
         >
-          {showForm ? 'Cancel' : 'New Project'}
+          {showForm ? 'Cancel' : t('projects.new')}
         </button>
       </div>
 
@@ -142,7 +144,7 @@ export default function ProjectsPage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {projects.map((p) => <ProjectCard key={p.id} project={p} />)}
         {projects.length === 0 && (
-          <p className="col-span-3 text-muted-foreground text-sm">No projects yet.</p>
+          <p className="col-span-3 text-muted-foreground text-sm">{t('projects.empty')}</p>
         )}
       </div>
     </div>
