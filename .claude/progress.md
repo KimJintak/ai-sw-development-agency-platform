@@ -244,3 +244,14 @@ Recent commits:
 - 001a755 chore(progress): auto log from ip-172-31-47-35
 
 Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
+
+## 2026-04-21T00:44:26Z · ip-172-31-47-35 · main
+
+Recent commits:
+- a1832d5 feat(api,web): Q&A structured tracker — question/answer pairs per project
+- 9b88c0b docs(changelog): backfill English changelog for Phase 21-24
+- a6a42ab chore(progress): auto log from ip-172-31-47-35
+- 2539475 chore(progress): auto log from ip-172-31-47-35
+- da01d72 feat(web): Phase 23 — inline iframe preview for project links
+
+Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
