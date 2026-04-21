@@ -17,7 +17,9 @@ import {
   GitBranch,
   HelpCircle,
   Trash2,
+  Eye,
 } from 'lucide-react'
+import { PreviewModal } from './preview-modal'
 
 type Category =
   | 'FIGMA'
@@ -68,10 +70,13 @@ const categoryOrder: Category[] = [
   'OTHER',
 ]
 
+const EMBEDDABLE: Category[] = ['FIGMA', 'PROTOTYPE', 'STAGING', 'PRODUCTION', 'DOCS']
+
 export function LinkHub({ projectId }: { projectId: string }) {
   const [links, setLinks] = useState<ProjectLink[]>([])
   const [adding, setAdding] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [preview, setPreview] = useState<ProjectLink | null>(null)
   const [form, setForm] = useState<{ category: Category; label: string; url: string; description: string }>({
     category: 'FIGMA',
     label: '',
@@ -211,6 +216,15 @@ export function LinkHub({ projectId }: { projectId: string }) {
                       )}
                     </div>
                   </div>
+                  {EMBEDDABLE.includes(link.category) && (
+                    <button
+                      onClick={() => setPreview(link)}
+                      className="text-muted-foreground hover:text-primary p-1"
+                      title="미리보기 (iframe)"
+                    >
+                      <Eye size={12} />
+                    </button>
+                  )}
                   <button
                     onClick={() => remove(link.id)}
                     className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity p-1"
@@ -224,6 +238,13 @@ export function LinkHub({ projectId }: { projectId: string }) {
           })}
         </ul>
       )}
+      <PreviewModal
+        open={preview !== null}
+        url={preview?.url ?? ''}
+        label={preview?.label ?? ''}
+        category={preview ? categoryMeta[preview.category]?.label ?? preview.category : ''}
+        onClose={() => setPreview(null)}
+      />
     </section>
   )
 }
