@@ -277,3 +277,14 @@ Recent commits:
 - a1832d5 feat(api,web): Q&A structured tracker — question/answer pairs per project
 
 Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
+
+## 2026-04-21T01:16:49Z · ip-172-31-47-35 · main
+
+Recent commits:
+- 13a12f0 feat(web): extend i18n to dashboard + projects list + project header
+- 3f73978 chore(progress): auto log from ip-172-31-47-35
+- 2c961be feat(web): WBS tree view with rollup completion rate
+- 517f990 chore(progress): auto log from ip-172-31-47-35
+- e11382e feat(api,web): promote Q&A to Work Item — bidirectional link
+
+Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
