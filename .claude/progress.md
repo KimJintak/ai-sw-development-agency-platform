@@ -266,3 +266,14 @@ Recent commits:
 - a6a42ab chore(progress): auto log from ip-172-31-47-35
 
 Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
+
+## 2026-04-21T01:03:53Z · ip-172-31-47-35 · main
+
+Recent commits:
+- 2c961be feat(web): WBS tree view with rollup completion rate
+- 517f990 chore(progress): auto log from ip-172-31-47-35
+- e11382e feat(api,web): promote Q&A to Work Item — bidirectional link
+- ae64b1a chore(progress): auto log from ip-172-31-47-35
+- a1832d5 feat(api,web): Q&A structured tracker — question/answer pairs per project
+
+Uncommitted:  2 files changed, 68 insertions(+), 69 deletions(-)
