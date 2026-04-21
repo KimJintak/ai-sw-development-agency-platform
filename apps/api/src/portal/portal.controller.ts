@@ -100,4 +100,23 @@ export class PortalController {
     })
     res.end(buffer)
   }
+
+  @Get('projects/:id/qna')
+  @ApiOperation({ summary: '내 프로젝트 Q&A 목록 (고객사 뷰)' })
+  listQna(@CurrentUser() user: PortalUser, @Param('id') id: string) {
+    return this.service.listQna(user.customerId, id)
+  }
+
+  @Post('projects/:id/qna')
+  @ApiOperation({ summary: '질문 등록 (고객사 작성, 자동 태그 from-portal)' })
+  createQna(
+    @CurrentUser() user: PortalUser & { name?: string },
+    @Param('id') id: string,
+    @Body() body: { question: string; priority?: 'P0' | 'P1' | 'P2' | 'P3' },
+  ) {
+    return this.service.createQna(user.customerId, id, body, {
+      id: user.id,
+      name: user.name ?? user.email,
+    })
+  }
 }

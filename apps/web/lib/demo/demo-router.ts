@@ -126,6 +126,8 @@ const routes: RouteHandler[] = [
   { pattern: new RegExp(`^/api/portal/projects/${PID}/builds$`), handler: (m) => getDemoReleases(resolveProjectId(m[1])).flatMap((r) => r.builds) },
   { pattern: new RegExp(`^/api/portal/projects/${PID}/requirements$`), handler: (m) => getDemoRequirements(resolveProjectId(m[1])) },
   { pattern: /^\/api\/portal\/feedback$/, handler: () => getDemoFeedback('demo-proj-001') },
+  { pattern: new RegExp(`^/api/portal/projects/${PID}/qna$`), method: 'GET', handler: (m) => getDemoQna(resolveProjectId(m[1])) },
+  { pattern: new RegExp(`^/api/portal/projects/${PID}/qna$`), method: 'POST', handler: () => ({ id: 'demo-portal-qna-new', success: true }) },
 
   // CRM Notifications
   { pattern: /^\/api\/crm\/notifications/, handler: () => [] },

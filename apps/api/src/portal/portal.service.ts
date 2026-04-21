@@ -163,4 +163,54 @@ export class PortalService {
       generatedAt: new Date().toISOString(),
     }
   }
+
+  async listQna(customerId: string, projectId: string) {
+    await this.assertOwnership(customerId, projectId)
+    return this.prisma.projectQna.findMany({
+      where: { projectId },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        question: true,
+        answer: true,
+        status: true,
+        priority: true,
+        askedByName: true,
+        answeredByName: true,
+        answeredAt: true,
+        tags: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    })
+  }
+
+  async createQna(
+    customerId: string,
+    projectId: string,
+    input: { question: string; priority?: 'P0' | 'P1' | 'P2' | 'P3' },
+    portalUser: { id: string; name: string },
+  ) {
+    await this.assertOwnership(customerId, projectId)
+    return this.prisma.projectQna.create({
+      data: {
+        projectId,
+        question: input.question,
+        priority: input.priority ?? 'P2',
+        tags: ['from-portal'],
+        askedBy: portalUser.id,
+        askedByName: `${portalUser.name} (고객)`,
+        status: 'OPEN',
+      },
+    })
+  }
+
+  private async assertOwnership(customerId: string, projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { customerId: true },
+    })
+    if (!project) throw new NotFoundException('Project not found')
+    if (project.customerId !== customerId) throw new ForbiddenException()
+  }
 }
