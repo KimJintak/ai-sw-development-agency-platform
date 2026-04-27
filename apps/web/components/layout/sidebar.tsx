@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
   LayoutDashboard,
@@ -35,29 +36,33 @@ const nav: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboar
 function DemoModeToggle() {
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { t } = useI18n()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  const active = mounted && isDemoMode
 
   return (
     <button
       type="button"
       role="switch"
-      aria-checked={isDemoMode}
+      aria-checked={active}
       onClick={toggleDemoMode}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-        isDemoMode
+        active
           ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium'
           : 'text-muted-foreground hover:bg-muted hover:text-foreground'
       }`}
     >
       <Monitor size={16} />
-      <span className="flex-1 text-left">{isDemoMode ? t('demo.on') : t('demo.mode')}</span>
+      <span className="flex-1 text-left">{active ? t('demo.on') : t('demo.mode')}</span>
       <span
         className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
-          isDemoMode ? 'bg-amber-500' : 'bg-muted-foreground/30'
+          active ? 'bg-amber-500' : 'bg-muted-foreground/30'
         }`}
       >
         <span
           className={`inline-block h-3 w-3 rounded-full bg-white shadow transition-transform ${
-            isDemoMode ? 'translate-x-3.5' : 'translate-x-0.5'
+            active ? 'translate-x-3.5' : 'translate-x-0.5'
           }`}
         />
       </span>

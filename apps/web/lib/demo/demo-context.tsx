@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 
 interface DemoModeContextValue {
   isDemoMode: boolean
@@ -15,10 +15,11 @@ const DemoModeContext = createContext<DemoModeContextValue>({
 const STORAGE_KEY = 'demo-mode'
 
 export function DemoModeProvider({ children }: { children: ReactNode }) {
-  const [isDemoMode, setIsDemoMode] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem(STORAGE_KEY) === 'true'
-  })
+  const [isDemoMode, setIsDemoMode] = useState(false)
+
+  useEffect(() => {
+    setIsDemoMode(localStorage.getItem(STORAGE_KEY) === 'true')
+  }, [])
 
   const toggleDemoMode = useCallback(() => {
     setIsDemoMode((prev) => {

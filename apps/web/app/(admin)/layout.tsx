@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { DemoModeProvider, useDemoMode } from '@/lib/demo/demo-context'
 import { I18nProvider } from '@/lib/i18n/i18n-context'
@@ -8,7 +9,9 @@ import { Eye, X } from 'lucide-react'
 
 function DemoBanner() {
   const { isDemoMode, toggleDemoMode } = useDemoMode()
-  if (!isDemoMode) return null
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!mounted || !isDemoMode) return null
 
   return (
     <div className="relative bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white px-4 py-2 flex items-center justify-center gap-3 text-sm shadow-sm">

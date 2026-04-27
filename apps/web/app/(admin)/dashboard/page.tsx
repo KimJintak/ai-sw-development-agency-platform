@@ -35,8 +35,21 @@ export default function DashboardPage() {
   useEffect(() => {
     apiClient.get<DashboardStats>('/api/dashboard/stats')
       .then((r) => setStats(r.data))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  const criticalOpen = stats?.feedback?.criticalOpen ?? 0
+  const pendingApproval = stats?.requirements?.pendingApproval ?? 0
+  const activeProjects = stats?.projects?.active ?? 0
+  const totalProjects = stats?.projects?.total ?? 0
+  const agentsOnline = stats?.agents?.online ?? 0
+  const agentsTotal = stats?.agents?.total
+  const weekReleases = stats?.releases?.thisWeek ?? 0
+  const unresolvedFeedback = stats?.feedback?.unresolved ?? 0
+  const weekTasks = stats?.tasks?.thisWeek ?? 0
+  const recentFeedback = stats?.recentFeedback ?? []
+  const recentReleases = stats?.recentReleases ?? []
 
   return (
     <div className="space-y-8">
@@ -60,32 +73,32 @@ export default function DashboardPage() {
       {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={<FolderKanban size={18} />} label={t('dashboard.stat.totalProjects')}
-          value={stats?.projects.total ?? 0} tone="blue" loading={loading} />
+          value={totalProjects} tone="blue" loading={loading} />
         <StatCard icon={<Activity size={18} />} label={t('dashboard.stat.activeProjects')}
-          value={stats?.projects.active ?? 0} tone="emerald" loading={loading} />
+          value={activeProjects} tone="emerald" loading={loading} />
         <StatCard icon={<Bot size={18} />} label={t('dashboard.stat.onlineAgents')}
-          value={stats?.agents.online ?? 0}
-          delta={stats ? `/ ${stats.agents.total}` : undefined}
+          value={agentsOnline}
+          delta={agentsTotal != null ? `/ ${agentsTotal}` : undefined}
           tone="violet" loading={loading} />
         <StatCard icon={<Rocket size={18} />} label="이번 주 배포"
-          value={stats?.releases.thisWeek ?? 0} tone="amber" loading={loading} />
+          value={weekReleases} tone="amber" loading={loading} />
       </div>
 
       {/* Alert row */}
-      {stats && (stats.feedback.criticalOpen > 0 || stats.requirements.pendingApproval > 0) && (
+      {(criticalOpen > 0 || pendingApproval > 0) && !loading && (
         <div className="flex flex-wrap gap-3">
-          {stats.feedback.criticalOpen > 0 && (
+          {criticalOpen > 0 && (
             <Link href="/feedback"
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400 hover:opacity-90">
               <AlertTriangle size={14} />
-              <span>P0/P1 미해결 피드백 <strong>{stats.feedback.criticalOpen}건</strong></span>
+              <span>P0/P1 미해결 피드백 <strong>{criticalOpen}건</strong></span>
             </Link>
           )}
-          {stats.requirements.pendingApproval > 0 && (
+          {pendingApproval > 0 && (
             <Link href="/projects"
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-700 dark:text-amber-400 hover:opacity-90">
               <FileText size={14} />
-              <span>요구사항 승인 대기 <strong>{stats.requirements.pendingApproval}건</strong></span>
+              <span>요구사항 승인 대기 <strong>{pendingApproval}건</strong></span>
             </Link>
           )}
         </div>
@@ -98,15 +111,15 @@ export default function DashboardPage() {
           <header className="flex items-center justify-between px-5 py-4 border-b">
             <div>
               <h2 className="font-semibold flex items-center gap-2"><MessageSquare size={14} /> 최근 피드백</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">이번 주 수신 {stats?.recentFeedback.length ?? 0}건</p>
+              <p className="text-xs text-muted-foreground mt-0.5">이번 주 수신 {recentFeedback.length}건</p>
             </div>
             <Link href="/feedback" className="text-xs text-primary hover:underline">전체 보기 →</Link>
           </header>
           <ul className="divide-y">
-            {loading ? <SkeletonRow /> : stats?.recentFeedback.length === 0 ? (
+            {loading ? <SkeletonRow /> : recentFeedback.length === 0 ? (
               <li className="p-8 text-center text-sm text-muted-foreground">이번 주 피드백 없음</li>
             ) : (
-              stats?.recentFeedback.map((fb) => (
+              recentFeedback.map((fb) => (
                 <li key={fb.id}>
                   <Link href={`/projects/${fb.project.id}/feedback`}
                     className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors group">
@@ -135,10 +148,10 @@ export default function DashboardPage() {
             </div>
           </header>
           <ul className="divide-y">
-            {loading ? <SkeletonRow /> : stats?.recentReleases.length === 0 ? (
+            {loading ? <SkeletonRow /> : recentReleases.length === 0 ? (
               <li className="p-8 text-center text-sm text-muted-foreground">배포된 릴리스 없음</li>
             ) : (
-              stats?.recentReleases.map((r) => (
+              recentReleases.map((r) => (
                 <li key={r.id}>
                   <Link href={`/projects/${r.project.id}/releases`}
                     className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors group">
@@ -173,18 +186,16 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-1">
                 <h3 className="font-semibold">{t('dashboard.completionRate')}</h3>
                 <div className="flex gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><CheckCircle2 size={11} className="text-green-500" /> 활성 {stats.projects.active}개</span>
-                  <span className="flex items-center gap-1"><MessageSquare size={11} className="text-amber-500" /> 미해결 피드백 {stats.feedback.unresolved}건</span>
-                  <span className="flex items-center gap-1"><Clock size={11} className="text-blue-500" /> 이번 주 태스크 {stats.tasks.thisWeek}건</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 size={11} className="text-green-500" /> 활성 {activeProjects}개</span>
+                  <span className="flex items-center gap-1"><MessageSquare size={11} className="text-amber-500" /> 미해결 피드백 {unresolvedFeedback}건</span>
+                  <span className="flex items-center gap-1"><Clock size={11} className="text-blue-500" /> 이번 주 태스크 {weekTasks}건</span>
                 </div>
               </div>
               <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-violet-500 transition-all"
                   style={{
-                    width: `${stats.projects.total > 0
-                      ? Math.round((stats.projects.active / stats.projects.total) * 100)
-                      : 0}%`,
+                    width: `${totalProjects > 0 ? Math.round((activeProjects / totalProjects) * 100) : 0}%`,
                   }}
                 />
               </div>
