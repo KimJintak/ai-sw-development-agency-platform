@@ -60,13 +60,16 @@ export class GitHubService {
     return {
       owner: ref.owner,
       repo: ref.repo,
+      name: data.name,
       defaultBranch: data.default_branch,
       private: data.private,
       htmlUrl: data.html_url,
-      description: data.description,
+      description: data.description ?? null,
       pushedAt: data.pushed_at,
       stargazersCount: data.stargazers_count,
       openIssuesCount: data.open_issues_count,
+      topics: data.topics ?? [],
+      language: data.language ?? null,
     }
   }
 
@@ -289,6 +292,55 @@ export class GitHubService {
     })
 
     return { pr, branch: input.branch, commitSha: latestSha }
+  }
+
+  async getReadme(projectId: string): Promise<string | null> {
+    const ref = await this.resolveRepo(projectId)
+    const client = this.requireClient()
+    try {
+      const { data } = await client.repos.getContent({ ...ref, path: 'README.md' })
+      if (Array.isArray(data) || data.type !== 'file') return null
+      return Buffer.from(data.content, 'base64').toString('utf-8')
+    } catch {
+      return null
+    }
+  }
+
+  async getFileTree(projectId: string): Promise<string[]> {
+    const ref = await this.resolveRepo(projectId)
+    const client = this.requireClient()
+    try {
+      const repoData = await client.repos.get(ref)
+      const branch = repoData.data.default_branch
+      const refData = await client.git.getRef({ ...ref, ref: `heads/${branch}` })
+      const sha = refData.data.object.sha
+      const { data } = await client.git.getTree({ ...ref, tree_sha: sha, recursive: '0' })
+      return data.tree.map((item) => `${item.type === 'tree' ? '📁' : '📄'} ${item.path}`).slice(0, 50)
+    } catch {
+      return []
+    }
+  }
+
+  async listAccessibleRepos(query?: string) {
+    const client = this.requireClient()
+    const { data } = await client.repos.listForAuthenticatedUser({
+      per_page: 100,
+      sort: 'updated',
+      direction: 'desc',
+    })
+    const repos = data.map((r) => ({
+      fullName: r.full_name,
+      name: r.name,
+      private: r.private,
+      description: r.description ?? null,
+      topics: r.topics ?? [],
+      language: r.language ?? null,
+      defaultBranch: r.default_branch,
+      htmlUrl: r.html_url,
+    }))
+    if (!query) return repos
+    const q = query.toLowerCase()
+    return repos.filter((r) => r.fullName.toLowerCase().includes(q))
   }
 
   async getCombinedStatus(projectId: string, sha: string) {

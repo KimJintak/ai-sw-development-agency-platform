@@ -248,12 +248,15 @@ enum DocumentCategory {
 }
 
 enum DocumentKind {
+  PRD
+  SRS
   SPEC
   CONTRACT
   REFERENCE
   API_DOC
   MANUAL
   DEPLOY_GUIDE
+  MEETING_NOTE
   OTHER
 }
 

@@ -11,13 +11,45 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { GitHubService } from './github.service'
+import { ScmGenerateService } from './scm-generate.service'
 
 @ApiTags('Source Control')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class ScmController {
-  constructor(private readonly gh: GitHubService) {}
+  constructor(
+    private readonly gh: GitHubService,
+    private readonly generate: ScmGenerateService,
+  ) {}
+
+  @Post('projects/:id/scm/generate-erd')
+  @ApiOperation({ summary: 'GitHub 저장소 분석으로 ERD Mermaid 코드 자동 생성 (LLM)' })
+  generateErd(@Param('id') id: string) {
+    return this.generate.generateErd(id)
+  }
+
+  @Post('projects/:id/scm/generate')
+  @ApiOperation({ summary: 'GitHub 저장소에서 Work Items / 문서 / Q&A 자동 생성 (LLM)' })
+  generateFromRepo(
+    @Param('id') id: string,
+    @Body() body: { sections: string[] },
+  ) {
+    return this.generate.generateFromRepo(id, body.sections ?? ['workItems', 'documents', 'qna'])
+  }
+
+  @Get('scm/repos')
+  @ApiOperation({ summary: '접근 가능한 GitHub 저장소 목록 (프로젝트 연결용)' })
+  listRepos(@Query('q') q?: string) {
+    return this.gh.listAccessibleRepos(q)
+  }
+
+  @Get('projects/:id/scm/readme')
+  @ApiOperation({ summary: 'GitHub 저장소 README 원문' })
+  async readme(@Param('id') id: string) {
+    const content = await this.gh.getReadme(id)
+    return { content }
+  }
 
   @Get('projects/:id/scm/repo')
   @ApiOperation({ summary: 'GitHub 저장소 메타데이터' })
