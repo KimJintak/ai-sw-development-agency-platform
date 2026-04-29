@@ -30,6 +30,19 @@ interface WorkItem {
   storyPoints: number | null
   platform: string | null
   order: number
+  children?: WorkItem[]
+}
+
+function flattenNested(items: WorkItem[]): WorkItem[] {
+  const result: WorkItem[] = []
+  const walk = (list: WorkItem[]) => {
+    list.forEach((item) => {
+      result.push(item)
+      if (item.children?.length) walk(item.children)
+    })
+  }
+  walk(items)
+  return result
 }
 
 interface TreeNode extends WorkItem {
@@ -110,7 +123,7 @@ export default function WbsPage({ params }: { params: Promise<{ id: string }> })
   const load = useCallback(() => {
     apiClient
       .get<WorkItem[]>(`/api/projects/${projectId}/work-items`)
-      .then((r) => setItems(r.data))
+      .then((r) => setItems(flattenNested(r.data)))
       .finally(() => setLoading(false))
   }, [projectId])
 

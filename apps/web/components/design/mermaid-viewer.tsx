@@ -47,5 +47,5 @@ export function MermaidViewer({ code, theme = 'default' }: MermaidViewerProps) {
     )
   }
 
-  return <div ref={ref} className="bg-white border rounded p-4 overflow-auto" />
+  return <div ref={ref} className="bg-white border rounded p-4 overflow-auto [&_svg]:pointer-events-none [&_svg]:max-w-full" />
 }
