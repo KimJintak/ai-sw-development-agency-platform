@@ -1,17 +1,55 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import apiClient from '@/lib/api-client'
 import { useI18n } from '@/lib/i18n/i18n-context'
 import type { Project } from 'shared-types'
+import { Github, Lock, Unlock, ChevronDown, Search, Loader2 } from 'lucide-react'
 
 interface Customer {
   id: string
   companyName: string
 }
 
+interface RepoItem {
+  fullName: string
+  name: string
+  private: boolean
+  description: string | null
+  topics: string[]
+  language: string | null
+  defaultBranch: string
+  htmlUrl: string
+}
+
 const PLATFORMS = ['MACOS', 'WINDOWS', 'IOS', 'ANDROID', 'WEB', 'LINUX'] as const
+
+const TOPIC_TO_PLATFORM: Record<string, string> = {
+  ios: 'IOS', iphone: 'IOS', swift: 'IOS', swiftui: 'IOS',
+  android: 'ANDROID', kotlin: 'ANDROID',
+  web: 'WEB', frontend: 'WEB', react: 'WEB', nextjs: 'WEB', vue: 'WEB', angular: 'WEB',
+  macos: 'MACOS', mac: 'MACOS', electron: 'MACOS',
+  windows: 'WINDOWS', dotnet: 'WINDOWS', wpf: 'WINDOWS', winforms: 'WINDOWS',
+  linux: 'LINUX', ubuntu: 'LINUX',
+}
+
+function inferPlatforms(topics: string[], language: string | null): string[] {
+  const found = new Set<string>()
+  for (const t of topics) {
+    const p = TOPIC_TO_PLATFORM[t.toLowerCase()]
+    if (p) found.add(p)
+  }
+  if (language) {
+    const p = TOPIC_TO_PLATFORM[language.toLowerCase()]
+    if (p) found.add(p)
+  }
+  return Array.from(found)
+}
+
+function repoNameToTitle(repoName: string): string {
+  return repoName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
 
 export default function ProjectsPage() {
   const { t } = useI18n()
@@ -25,6 +63,13 @@ export default function ProjectsPage() {
   const [customerId, setCustomerId] = useState('')
   const [platforms, setPlatforms] = useState<string[]>([])
   const [githubRepo, setGithubRepo] = useState('')
+  const [repoPickerOpen, setRepoPickerOpen] = useState(false)
+  const [repoSearch, setRepoSearch] = useState('')
+  const [repoList, setRepoList] = useState<RepoItem[]>([])
+  const [repoLoading, setRepoLoading] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     apiClient.get('/api/projects').then((r) => setProjects(r.data)).catch(() => {})
@@ -35,24 +80,65 @@ export default function ProjectsPage() {
     setShowForm(true)
   }
 
+  const openRepoPicker = async () => {
+    setRepoPickerOpen(true)
+    if (repoList.length > 0) return
+    setRepoLoading(true)
+    try {
+      const res = await apiClient.get<RepoItem[]>('/api/scm/repos')
+      setRepoList(res.data)
+    } catch {
+      setRepoList([])
+    } finally {
+      setRepoLoading(false)
+    }
+  }
+
+  const selectRepo = (r: RepoItem) => {
+    setGithubRepo(r.fullName)
+    if (!name.trim()) setName(repoNameToTitle(r.name))
+    if (!description.trim() && r.description) setDescription(r.description)
+    const inferred = inferPlatforms(r.topics, r.language)
+    if (platforms.length === 0 && inferred.length > 0) setPlatforms(inferred)
+    setRepoPickerOpen(false)
+    setRepoSearch('')
+  }
+
+  const filteredRepos = repoList.filter((r) =>
+    r.fullName.toLowerCase().includes(repoSearch.toLowerCase())
+  )
+
   const togglePlatform = (p: string) => {
     setPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p])
   }
 
   const submit = async () => {
-    if (!name.trim() || !customerId || platforms.length === 0) return
-    await apiClient.post('/api/projects', {
-      name,
-      description: description || undefined,
-      customerId,
-      platforms,
-      githubRepo: githubRepo || undefined,
-    })
+    setSubmitError(null)
+    if (!name.trim()) { setSubmitError('프로젝트 이름을 입력하세요.'); return }
+    if (!customerId) { setSubmitError('고객사를 선택하세요.'); return }
+    if (platforms.length === 0) { setSubmitError('플랫폼을 하나 이상 선택하세요.'); return }
+    setSubmitting(true)
+    try {
+      await apiClient.post('/api/projects', {
+        name,
+        description: description || undefined,
+        customerId,
+        platforms,
+        githubRepo: githubRepo || undefined,
+      })
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string | string[] } } }).response?.data?.message
+      setSubmitError(Array.isArray(msg) ? msg.join(', ') : (msg ?? '프로젝트 생성에 실패했습니다.'))
+      setSubmitting(false)
+      return
+    }
     setName('')
     setDescription('')
     setCustomerId('')
     setPlatforms([])
     setGithubRepo('')
+    setSubmitError(null)
+    setSubmitting(false)
     setShowForm(false)
     apiClient.get('/api/projects').then((r) => setProjects(r.data))
   }
@@ -123,19 +209,93 @@ export default function ProjectsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">GitHub Repo (optional)</label>
-            <input
-              value={githubRepo}
-              onChange={(e) => setGithubRepo(e.target.value)}
-              placeholder="org/repo"
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-            />
+            <div className="flex gap-2">
+              <input
+                value={githubRepo}
+                onChange={(e) => setGithubRepo(e.target.value)}
+                placeholder="org/repo"
+                className="flex-1 border rounded-md px-3 py-2 text-sm bg-background"
+              />
+              <button
+                type="button"
+                onClick={openRepoPicker}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-md hover:bg-muted whitespace-nowrap"
+              >
+                <Github size={14} />
+                GitHub에서 가져오기
+                <ChevronDown size={12} />
+              </button>
+            </div>
+
+            {repoPickerOpen && (
+              <div ref={pickerRef} className="mt-2 border rounded-lg bg-popover shadow-lg z-50">
+                <div className="p-2 border-b flex items-center gap-2">
+                  <Search size={13} className="text-muted-foreground shrink-0" />
+                  <input
+                    autoFocus
+                    value={repoSearch}
+                    onChange={(e) => setRepoSearch(e.target.value)}
+                    placeholder="저장소 검색..."
+                    className="flex-1 bg-transparent text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setRepoPickerOpen(false); setRepoSearch('') }}
+                    className="text-xs text-muted-foreground hover:text-foreground px-1"
+                  >
+                    닫기
+                  </button>
+                </div>
+                <ul className="max-h-52 overflow-y-auto divide-y divide-border">
+                  {repoLoading ? (
+                    <li className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                      <Loader2 size={14} className="animate-spin" /> 불러오는 중...
+                    </li>
+                  ) : filteredRepos.length === 0 ? (
+                    <li className="py-6 text-center text-sm text-muted-foreground">저장소가 없습니다.</li>
+                  ) : filteredRepos.map((r) => {
+                    const inferred = inferPlatforms(r.topics, r.language)
+                    return (
+                      <li key={r.fullName}>
+                        <button
+                          type="button"
+                          onClick={() => selectRepo(r)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left hover:bg-muted/60"
+                        >
+                          {r.private ? <Lock size={12} className="text-amber-500 shrink-0" /> : <Unlock size={12} className="text-emerald-500 shrink-0" />}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{r.fullName}</div>
+                            {r.description && <div className="text-xs text-muted-foreground truncate">{r.description}</div>}
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {r.language && (
+                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{r.language}</span>
+                              )}
+                              {inferred.map((p) => (
+                                <span key={p} className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">{p}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
+          {submitError && (
+            <div className="text-sm text-red-600 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-md px-3 py-2">
+              {submitError}
+            </div>
+          )}
           <div className="flex justify-end">
             <button
               onClick={submit}
-              className="bg-primary text-primary-foreground text-sm px-4 py-2 rounded-md hover:opacity-90"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-2 rounded-md hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Create Project
+              {submitting && <Loader2 size={14} className="animate-spin" />}
+              {submitting ? '생성 중...' : 'Create Project'}
             </button>
           </div>
         </div>
