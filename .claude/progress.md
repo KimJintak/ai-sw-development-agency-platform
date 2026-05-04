@@ -673,3 +673,14 @@ Recent commits:
 - b41ca0e fix(web): WBS 진행률 계산 수정 + ERD 저장 UX 개선
 
 Uncommitted:  1 file changed, 9 insertions(+)
+
+## 2026-05-04T00:30:16Z · ip-172-31-47-35 · main
+
+Recent commits:
+- fd714b7 chore(progress): auto log from ip-172-31-47-35
+- 1e00c0b chore(progress): auto log from ip-172-31-47-35
+- 2d1e832 chore: 패키지 업데이트, Tailwind 설정, 클로드 권한 및 스크립트
+- ecf4e7c feat(web): 프로젝트 목록·상세 UI 개선 + Info 탭 추가
+- a186259 feat(api): SCM GitHub 연동 강화 + 문서 타입 enum 확장
+
+Uncommitted:  2 files changed, 15 insertions(+), 1 deletion(-)
