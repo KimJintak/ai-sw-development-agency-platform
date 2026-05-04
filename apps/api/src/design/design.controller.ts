@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { ArtifactType } from '@prisma/client'
 import { DesignService } from './design.service'
+import { UxAgentService } from './ux-agent.service'
 import {
   CreateDesignArtifactDto,
   UpdateDesignArtifactDto,
@@ -24,7 +25,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 @UseGuards(JwtAuthGuard)
 @Controller('design')
 export class DesignController {
-  constructor(private readonly service: DesignService) {}
+  constructor(
+    private readonly service: DesignService,
+    private readonly uxAgent: UxAgentService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List design artifacts by projectId (optional type filter)' })
@@ -69,5 +73,42 @@ export class DesignController {
   @ApiOperation({ summary: 'Delete artifact and all its versions' })
   remove(@Param('id') id: string) {
     return this.service.remove(id)
+  }
+
+  @Post('generate')
+  @ApiOperation({
+    summary: 'UX Agent: 요구사항 컨텍스트 → Mermaid 다이어그램 자동 생성 (FR-06-07)',
+  })
+  async generate(
+    @Body()
+    body: {
+      projectId: string
+      projectName: string
+      diagramType: ArtifactType
+      context: string
+      save?: boolean
+    },
+    @CurrentUser() user: { id: string },
+  ) {
+    const result = await this.uxAgent.generateDiagram({
+      projectName: body.projectName,
+      diagramType: body.diagramType,
+      context: body.context,
+    })
+
+    if (body.save) {
+      const artifact = await this.service.create(
+        {
+          projectId: body.projectId,
+          type: body.diagramType as unknown as import('./dto/design-artifact.dto').ArtifactTypeDto,
+          title: result.title,
+          mermaidCode: result.mermaidCode,
+        },
+        user.id,
+      )
+      return { ...result, artifact }
+    }
+
+    return result
   }
 }

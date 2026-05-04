@@ -9,6 +9,53 @@
 
 ## [미출시]
 
+### Phase 34 — QA Agent 테스트 실패 패턴 분석 (FR-07-06, P2)
+
+#### 추가
+- **`QaAgentService`** (`apps/api/src/qa/qa-agent.service.ts`) — 프로젝트 전체 TestCase의 최근 10회 결과를 분석하여 회귀 위험 WorkItem 목록 반환. 실패율 ≥70% → HIGH / ≥40% → MEDIUM / ≥20% → LOW.
+- **`GET /api/qa/regression-risk/:projectId`** — 위험 순 정렬된 WorkItem 목록 + 최근 실패 케이스.
+- **QA 페이지 "회귀 위험" 탭** — HIGH/MEDIUM/LOW 뱃지, 실패율 막대, 최근 실패 케이스 목록, 재분석 버튼.
+
+---
+
+### Phase 33 — UX Agent Mermaid 자동 생성 (FR-06-07)
+
+#### 추가
+- **`UxAgentService`** (`apps/api/src/design/ux-agent.service.ts`) — LlmService 경유 프로젝트 컨텍스트 → Mermaid 다이어그램 자동 생성. ARCHITECTURE / ERD / SEQUENCE / FLOWCHART 타입별 전용 프롬프트. LLM 키 없으면 dry-run 플레이스홀더 반환.
+- **`POST /api/design/generate`** — `{ projectId, projectName, diagramType, context, save? }`. `save=true` 시 디자인 아티팩트로 즉시 저장.
+- **Design Hub "AI 생성" 버튼** — 보라색 버튼 클릭 → 컨텍스트 입력 → 미리보기 → 저장. WIREFRAME 탭에서는 숨김.
+
+---
+
+### Phase 32 — 에이전트 장비 메트릭 모니터링 (FR-05-09)
+
+#### 추가
+- **`AgentCard` 스키마 확장** — `cpuUsage / memUsage / diskUsage` (Float?) 필드 추가. `prisma db push` 완료.
+- **`PATCH /api/agents/cards/:id/metrics`** — 에이전트 heartbeat 시 CPU/메모리/디스크 사용률 업데이트. `lastSeenAt` 동시 갱신.
+- **에이전트 모니터 페이지 개편** (`/agents`) — 메트릭 게이지 바 (warn 70%/danger 90% 색상 분기), 온라인/오프라인 요약 카드, 30초 자동 새로고침.
+
+---
+
+### Phase 31 — 빌드 로그 실시간 WebSocket 스트리밍 (FR-05-08)
+
+#### 추가
+- **`BuildGateway`** (`apps/api/src/releases/build.gateway.ts`) — `/builds` Socket.IO namespace. `build:subscribe / build:unsubscribe` 이벤트로 특정 빌드 룸 구독. `emitLog()` / `emitStatus()` 로 log 청크·상태 변경을 broadcast.
+- **`ReleasesService.updateBuild()`** 수정 — 빌드 로그/상태 업데이트 시 `BuildGateway`로 자동 emit.
+- **`BuildLogViewer` 컴포넌트** (`apps/web/components/releases/build-log-viewer.tsx`) — `/builds` 네임스페이스 연결, 실시간 로그 스트림, live/offline 인디케이터, 상태 뱃지.
+- **릴리스 페이지 빌드 섹션** — "로그 보기" 토글로 `BuildLogViewer` 인라인 표시.
+
+---
+
+### Phase 30 — PERT 기반 일정 추정 + Critical Path (FR-02-05)
+
+#### 추가
+- **`PertService`** (`apps/api/src/work-items/pert.service.ts`) — Kahn 위상 정렬 후 Forward/Backward Pass로 ES/EF/LS/LF/Slack 계산. Slack ≤ 0.01인 노드를 Critical Path로 표시. `upsertEstimation()` 으로 PERT 3점 추정 저장.
+- **`POST /api/projects/:id/work-items/:id/estimation`** — optimistic/mostLikely/pessimistic 입력 → PERT·분산 자동 계산 후 저장(upsert).
+- **`GET /api/projects/:id/work-items/pert`** — 전체 WorkItem의 PERT 결과 + Critical Path ID 목록 + 프로젝트 기간 반환.
+- **WBS 페이지 PERT 탭** — 요약 카드 4개(기간·CP태스크·σ·비CP), 전체 노드 테이블(ES/EF/LS/LF/Slack/CP), Critical Path 행 빨간 강조.
+
+---
+
 ### Phase 29 — 대시보드 KPI 강화 + 피드백 루프 알림
 
 #### 추가

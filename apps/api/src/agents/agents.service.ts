@@ -57,6 +57,17 @@ export class AgentsService {
     return card
   }
 
+  async updateMetrics(
+    id: string,
+    metrics: { cpuUsage?: number; memUsage?: number; diskUsage?: number },
+  ) {
+    await this.findCard(id)
+    return this.prisma.agentCard.update({
+      where: { id },
+      data: { ...metrics, lastSeenAt: new Date() },
+    })
+  }
+
   listTasks(q: ListAgentTasksQuery) {
     const where: Prisma.AgentTaskWhereInput = {}
     if (q.projectId) where.projectId = q.projectId

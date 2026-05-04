@@ -1,7 +1,8 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common'
+import { Injectable, Inject, Logger, NotFoundException, BadRequestException, forwardRef } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { BuildStatus, NotificationType, Platform, Prisma, ReleaseStatus } from '@prisma/client'
 import { NotificationsService } from '../notifications/notifications.service'
+import { BuildGateway } from './build.gateway'
 
 @Injectable()
 export class ReleasesService {
@@ -10,6 +11,8 @@ export class ReleasesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    @Inject(forwardRef(() => BuildGateway))
+    private readonly buildGateway: BuildGateway,
   ) {}
 
   listByProject(projectId: string) {
@@ -111,6 +114,14 @@ export class ReleasesService {
     if (input.s3Key) data.s3Key = input.s3Key
     if (input.cloudfrontUrl) data.cloudfrontUrl = input.cloudfrontUrl
     const updated = await this.prisma.build.update({ where: { id: buildId }, data })
+
+    // 실시간 WebSocket 스트리밍 (FR-05-08)
+    if (input.buildLog) {
+      this.buildGateway.emitLog(buildId, input.buildLog)
+    }
+    if (input.status) {
+      this.buildGateway.emitStatus(buildId, input.status, updated.completedAt ?? undefined)
+    }
 
     if (input.status === BuildStatus.SUCCESS) {
       await this.notifyBuildReady(build.releaseId, build.platform, buildId).catch((err) =>

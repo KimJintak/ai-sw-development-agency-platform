@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import apiClient from '@/lib/api-client'
 import { MermaidViewer } from '@/components/design/mermaid-viewer'
+import { Sparkles, Loader2 } from 'lucide-react'
 
 type ArtifactType = 'ARCHITECTURE' | 'ERD' | 'WIREFRAME' | 'FLOWCHART' | 'SEQUENCE'
 type MermaidTheme = 'default' | 'dark' | 'forest' | 'neutral'
@@ -36,6 +37,10 @@ export default function DesignHubPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [theme, setTheme] = useState<MermaidTheme>('default')
   const [showForm, setShowForm] = useState(false)
+  const [showAiPanel, setShowAiPanel] = useState(false)
+  const [aiContext, setAiContext] = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiPreview, setAiPreview] = useState<{ title: string; mermaidCode: string } | null>(null)
   const [title, setTitle] = useState('')
   const [mermaidCode, setMermaidCode] = useState('')
   const [figmaUrl, setFigmaUrl] = useState('')
@@ -59,6 +64,9 @@ export default function DesignHubPage() {
 
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
 
+  const reload = () =>
+    apiClient.get(`/api/design?projectId=${projectId}&type=${activeTab}`).then((r) => setItems(r.data))
+
   const submit = async () => {
     if (!title.trim()) return
     if (activeTab === 'WIREFRAME' && !figmaUrl.trim()) return
@@ -72,9 +80,40 @@ export default function DesignHubPage() {
     })
     setTitle('')
     setShowForm(false)
-    apiClient
-      .get(`/api/design?projectId=${projectId}&type=${activeTab}`)
-      .then((r) => setItems(r.data))
+    reload()
+  }
+
+  const generateWithAI = async () => {
+    if (!aiContext.trim() || activeTab === 'WIREFRAME') return
+    setAiGenerating(true)
+    setAiPreview(null)
+    try {
+      const r = await apiClient.post<{ title: string; mermaidCode: string }>('/api/design/generate', {
+        projectId,
+        projectName: projectId,
+        diagramType: activeTab,
+        context: aiContext,
+        save: false,
+      })
+      setAiPreview(r.data)
+    } finally {
+      setAiGenerating(false)
+    }
+  }
+
+  const saveAiResult = async () => {
+    if (!aiPreview) return
+    await apiClient.post('/api/design/generate', {
+      projectId,
+      projectName: projectId,
+      diagramType: activeTab,
+      context: aiContext,
+      save: true,
+    })
+    setShowAiPanel(false)
+    setAiPreview(null)
+    setAiContext('')
+    reload()
   }
 
   return (
@@ -116,13 +155,69 @@ export default function DesignHubPage() {
             <option value="neutral">neutral</option>
           </select>
         )}
+        {activeTab !== 'WIREFRAME' && (
+          <button
+            onClick={() => { setShowAiPanel((v) => !v); setShowForm(false) }}
+            className="flex items-center gap-1.5 text-sm bg-violet-600 text-white px-3 py-1 rounded-md hover:opacity-90"
+          >
+            <Sparkles size={13} />
+            AI 생성
+          </button>
+        )}
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => { setShowForm((v) => !v); setShowAiPanel(false) }}
           className="text-sm bg-primary text-primary-foreground px-3 py-1 rounded-md hover:opacity-90"
         >
           {showForm ? 'Cancel' : 'New'}
         </button>
       </div>
+
+      {/* AI 자동 생성 패널 (FR-06-07) */}
+      {showAiPanel && activeTab !== 'WIREFRAME' && (
+        <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-violet-700 dark:text-violet-400">
+            <Sparkles size={14} />
+            UX Agent — {activeTab} 다이어그램 자동 생성
+          </div>
+          <textarea
+            value={aiContext}
+            onChange={(e) => setAiContext(e.target.value)}
+            rows={4}
+            placeholder="요구사항, 기능 명세, 또는 시스템 설명을 입력하세요..."
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-background resize-none"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={generateWithAI}
+              disabled={!aiContext.trim() || aiGenerating}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg disabled:opacity-50 hover:opacity-90"
+            >
+              {aiGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+              {aiGenerating ? '생성 중...' : '미리보기 생성'}
+            </button>
+            {aiPreview && (
+              <button
+                onClick={saveAiResult}
+                className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:opacity-90"
+              >
+                저장
+              </button>
+            )}
+          </div>
+          {aiPreview && (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">미리보기: {aiPreview.title}</div>
+              <MermaidViewer code={aiPreview.mermaidCode} theme={theme} />
+              <details>
+                <summary className="text-xs text-muted-foreground cursor-pointer">Mermaid 코드 보기</summary>
+                <pre className="mt-1 text-xs font-mono bg-muted p-3 rounded-lg overflow-auto whitespace-pre-wrap">
+                  {aiPreview.mermaidCode}
+                </pre>
+              </details>
+            </div>
+          )}
+        </div>
+      )}
 
       {showForm && (
         <div className="bg-card border rounded-lg p-4 space-y-3">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, use } from 'react'
 import Link from 'next/link'
 import apiClient from '@/lib/api-client'
+import BuildLogViewer from '@/components/releases/build-log-viewer'
 import {
   Package,
   Plus,
@@ -414,28 +415,7 @@ export default function ReleasesPage({ params }: { params: Promise<{ id: string 
                       <div className="p-4 text-sm text-muted-foreground italic">아직 빌드 없음.</div>
                     ) : (
                       selected.builds.map((b) => (
-                        <div key={b.id} className="px-4 py-3 text-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {buildStatusIcon[b.status]}
-                              <span className="font-medium">{b.platform}</span>
-                              <span className="text-xs text-muted-foreground">{b.status}</span>
-                            </div>
-                            {b.cloudfrontUrl && (
-                              <a
-                                href={b.cloudfrontUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1 text-xs text-primary hover:underline"
-                              >
-                                다운로드 <ExternalLink size={10} />
-                              </a>
-                            )}
-                          </div>
-                          {b.buildLog && (
-                            <div className="text-xs text-muted-foreground mt-1 font-mono truncate">{b.buildLog}</div>
-                          )}
-                        </div>
+                        <BuildRow key={b.id} build={b} />
                       ))
                     )}
                   </div>
@@ -543,7 +523,7 @@ function PrLinker({
   }
 
   return (
-    <div className="border rounded-lg bg-card">
+    <div className="border rounded-lg bg-card" data-pr-linker>
       <header
         className="px-4 py-2.5 text-sm font-medium flex items-center justify-between cursor-pointer hover:bg-muted/30"
         onClick={() => setExpanded((v) => !v)}
@@ -585,6 +565,40 @@ function PrLinker({
             </button>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+function BuildRow({ build }: { build: Build }) {
+  const [showLog, setShowLog] = useState(false)
+  const isActive = build.status === 'PENDING' || build.status === 'BUILDING'
+
+  return (
+    <div className="px-4 py-3 text-sm space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {buildStatusIcon[build.status]}
+          <span className="font-medium">{build.platform}</span>
+          <span className="text-xs text-muted-foreground">{build.status}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {build.cloudfrontUrl && (
+            <a href={build.cloudfrontUrl} target="_blank" rel="noreferrer"
+              className="flex items-center gap-1 text-xs text-primary hover:underline">
+              다운로드 <ExternalLink size={10} />
+            </a>
+          )}
+          {(build.buildLog || isActive) && (
+            <button onClick={() => setShowLog((v) => !v)}
+              className="text-xs text-muted-foreground hover:text-foreground underline">
+              {showLog ? '로그 숨기기' : '로그 보기'}
+            </button>
+          )}
+        </div>
+      </div>
+      {showLog && (
+        <BuildLogViewer buildId={build.id} initialLog={build.buildLog} initialStatus={build.status} />
       )}
     </div>
   )

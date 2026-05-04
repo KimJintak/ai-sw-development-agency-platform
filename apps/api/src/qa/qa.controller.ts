@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Platform, TestRunStatus } from '@prisma/client'
 import { QaService } from './qa.service'
+import { QaAgentService } from './qa-agent.service'
 import {
   CreateTestCaseDto,
   CreateTestRunDto,
@@ -26,7 +27,10 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 @UseGuards(JwtAuthGuard)
 @Controller('qa')
 export class QaController {
-  constructor(private readonly service: QaService) {}
+  constructor(
+    private readonly service: QaService,
+    private readonly qaAgent: QaAgentService,
+  ) {}
 
   /* ────────── TestCase ────────── */
 
@@ -133,5 +137,14 @@ export class QaController {
   @ApiOperation({ summary: 'List all test runs for a project (via releases)' })
   listRunsByProject(@Param('projectId') projectId: string) {
     return this.service.findTestRunsByProject(projectId)
+  }
+
+  @Get('regression-risk/:projectId')
+  @ApiOperation({ summary: 'QA Agent: 테스트 실패 패턴 분석 + 회귀 위험 WorkItem 목록 (FR-07-06)' })
+  getRegressionRisk(
+    @Param('projectId') projectId: string,
+    @Query('lookback') lookback?: string,
+  ) {
+    return this.qaAgent.analyzeRegressionRisk(projectId, lookback ? Number(lookback) : 10)
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { AgentsService } from './agents.service'
 import { CreateAgentTaskDto } from './dto/create-agent-task.dto'
@@ -20,6 +20,15 @@ export class AgentsController {
   @ApiOperation({ summary: 'List agent cards' })
   listCards() {
     return this.service.listCards()
+  }
+
+  @Patch('cards/:id/metrics')
+  @ApiOperation({ summary: '에이전트 장비 메트릭 업데이트 (FR-05-09) — 에이전트 heartbeat용' })
+  updateMetrics(
+    @Param('id') id: string,
+    @Body() body: { cpuUsage?: number; memUsage?: number; diskUsage?: number },
+  ) {
+    return this.service.updateMetrics(id, body)
   }
 
   @Get('tasks/list')

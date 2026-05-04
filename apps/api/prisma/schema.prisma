@@ -667,6 +667,10 @@ model AgentCard {
   skills      Json
   status      AgentStatus @default(OFFLINE)
   lastSeenAt  DateTime?   @map("last_seen_at")
+  // FR-05-09: 장비 메트릭 (에이전트가 heartbeat 시 업데이트)
+  cpuUsage    Float?      @map("cpu_usage")
+  memUsage    Float?      @map("mem_usage")
+  diskUsage   Float?      @map("disk_usage")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 

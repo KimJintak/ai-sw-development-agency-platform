@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import apiClient from '@/lib/api-client'
-import { CheckCircle2, XCircle, MinusCircle, Play, Plus, ChevronDown, ChevronRight } from 'lucide-react'
+import { CheckCircle2, XCircle, MinusCircle, Play, Plus, ChevronDown, ChevronRight, AlertTriangle, TrendingDown } from 'lucide-react'
 
 type Platform = 'MACOS' | 'WINDOWS' | 'IOS' | 'ANDROID' | 'WEB' | 'LINUX'
 type TestResultStatus = 'PASSED' | 'FAILED' | 'SKIPPED'
@@ -68,6 +68,22 @@ interface Release {
   platforms: Platform[]
 }
 
+interface RegressionRiskItem {
+  workItemId: string
+  workItemTitle: string
+  workItemStatus: string
+  testCaseCount: number
+  failedCaseCount: number
+  failureRate: number
+  riskLevel: 'HIGH' | 'MEDIUM' | 'LOW'
+  recentFailures: {
+    testCaseId: string
+    testCaseTitle: string
+    failCount: number
+    lastFailedAt: string
+  }[]
+}
+
 const PLATFORMS: Platform[] = ['MACOS', 'WINDOWS', 'IOS', 'ANDROID', 'WEB', 'LINUX']
 
 const STATUS_ICON: Record<TestResultStatus, React.ReactNode> = {
@@ -85,7 +101,7 @@ const RUN_STATUS_BADGE: Record<TestRunStatus, string> = {
 
 export default function QaPage() {
   const { id: projectId } = useParams<{ id: string }>()
-  const [tab, setTab] = useState<'cases' | 'runs'>('cases')
+  const [tab, setTab] = useState<'cases' | 'runs' | 'regression'>('cases')
 
   // ── Test Cases state ──
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
@@ -106,6 +122,10 @@ export default function QaPage() {
   const [expandedRun, setExpandedRun] = useState<string | null>(null)
   const [runResults, setRunResults] = useState<Record<string, TestResult[]>>({})
   const [runSummaries, setRunSummaries] = useState<Record<string, RunSummary>>({})
+
+  // ── Regression Risk state ──
+  const [regressionRisk, setRegressionRisk] = useState<RegressionRiskItem[] | null>(null)
+  const [regressionLoading, setRegressionLoading] = useState(false)
 
   const loadCoverage = () =>
     apiClient.get<Coverage>(`/api/qa/coverage/${projectId}`).then((r) => setCoverage(r.data)).catch(() => null)
@@ -207,15 +227,23 @@ export default function QaPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {(['cases', 'runs'] as const).map((t) => (
+        {(['cases', 'runs', 'regression'] as const).map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm border-b-2 -mb-px ${
+            onClick={() => {
+              setTab(t)
+              if (t === 'regression' && !regressionRisk) {
+                setRegressionLoading(true)
+                apiClient.get<RegressionRiskItem[]>(`/api/qa/regression-risk/${projectId}`)
+                  .then((r) => setRegressionRisk(r.data))
+                  .finally(() => setRegressionLoading(false))
+              }
+            }}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm border-b-2 -mb-px ${
               tab === t ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            {t === 'cases' ? '테스트 케이스' : '테스트 런'}
+            {t === 'cases' ? '테스트 케이스' : t === 'runs' ? '테스트 런' : <><TrendingDown size={13} />회귀 위험</>}
           </button>
         ))}
       </div>
@@ -447,6 +475,94 @@ export default function QaPage() {
               </div>
             )
           })}
+        </div>
+      )}
+      {/* ── Regression Risk Tab ── */}
+      {tab === 'regression' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <AlertTriangle size={14} className="text-amber-500" />
+                회귀 위험 WorkItem 분석 (FR-07-06)
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                최근 10회 테스트 결과 기반 실패율이 높은 WorkItem을 플래깅합니다.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setRegressionLoading(true)
+                apiClient.get<RegressionRiskItem[]>(`/api/qa/regression-risk/${projectId}`)
+                  .then((r) => setRegressionRisk(r.data))
+                  .finally(() => setRegressionLoading(false))
+              }}
+              className="text-xs px-3 py-1.5 rounded border hover:bg-muted"
+            >
+              재분석
+            </button>
+          </div>
+
+          {regressionLoading && (
+            <div className="text-sm text-muted-foreground py-8 text-center">분석 중...</div>
+          )}
+
+          {!regressionLoading && regressionRisk !== null && regressionRisk.length === 0 && (
+            <div className="border rounded-xl p-12 text-center text-muted-foreground bg-card">
+              <CheckCircle2 size={32} className="mx-auto mb-3 text-emerald-500 opacity-60" />
+              <p className="text-sm">회귀 위험 WorkItem이 없습니다. 테스트 결과가 양호합니다.</p>
+            </div>
+          )}
+
+          {!regressionLoading && regressionRisk && regressionRisk.length > 0 && (
+            <div className="space-y-3">
+              {regressionRisk.map((item) => (
+                <div key={item.workItemId} className={`border rounded-xl p-4 bg-card space-y-3 ${
+                  item.riskLevel === 'HIGH' ? 'border-red-500/40 bg-red-500/5' :
+                  item.riskLevel === 'MEDIUM' ? 'border-amber-500/40 bg-amber-500/5' :
+                  'border-yellow-500/20'
+                }`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                          item.riskLevel === 'HIGH' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+                          item.riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400'
+                        }`}>
+                          {item.riskLevel}
+                        </span>
+                        <span className="font-medium text-sm truncate">{item.workItemTitle}</span>
+                        <span className="text-xs text-muted-foreground">{item.workItemStatus}</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-2xl font-bold text-red-600">{item.failureRate}%</div>
+                      <div className="text-[10px] text-muted-foreground">실패율</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 text-xs text-muted-foreground">
+                    <span>전체 케이스 {item.testCaseCount}개</span>
+                    <span>실패 케이스 {item.failedCaseCount}개</span>
+                  </div>
+                  {item.recentFailures.length > 0 && (
+                    <div className="border-t pt-2 space-y-1">
+                      <div className="text-[10px] text-muted-foreground uppercase font-medium">최근 실패 케이스</div>
+                      {item.recentFailures.map((f) => (
+                        <div key={f.testCaseId} className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1">
+                            <XCircle size={10} className="text-red-500" />
+                            {f.testCaseTitle}
+                          </span>
+                          <span className="text-muted-foreground">{f.failCount}회 실패</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger'
 import { WorkItemsService } from './work-items.service'
+import { PertService, UpsertEstimationDto } from './pert.service'
 import { CreateWorkItemDto, UpdateWorkItemDto, UpdateWorkItemStatusDto } from './dto/work-item.dto'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 
@@ -9,12 +10,21 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 @UseGuards(JwtAuthGuard)
 @Controller('projects/:projectId/work-items')
 export class WorkItemsController {
-  constructor(private service: WorkItemsService) {}
+  constructor(
+    private service: WorkItemsService,
+    private pert: PertService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List work items (hierarchy) for a project' })
   findAll(@Param('projectId') projectId: string) {
     return this.service.findAllByProject(projectId)
+  }
+
+  @Get('pert')
+  @ApiOperation({ summary: 'PERT 기반 일정 추정 + Critical Path (FR-02-05)' })
+  getCriticalPath(@Param('projectId') projectId: string) {
+    return this.pert.calculateCriticalPath(projectId)
   }
 
   @Get(':id')
@@ -25,6 +35,12 @@ export class WorkItemsController {
   @ApiOperation({ summary: 'Create work item' })
   create(@Param('projectId') projectId: string, @Body() dto: CreateWorkItemDto) {
     return this.service.create({ ...dto, projectId })
+  }
+
+  @Post(':id/estimation')
+  @ApiOperation({ summary: 'PERT 추정 저장/갱신 (optimistic / mostLikely / pessimistic)' })
+  upsertEstimation(@Param('id') workItemId: string, @Body() dto: UpsertEstimationDto) {
+    return this.pert.upsertEstimation(workItemId, dto)
   }
 
   @Patch(':id')
